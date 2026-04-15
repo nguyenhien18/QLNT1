@@ -1,0 +1,187 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin - Hóa đơn</title>
+    <link rel="stylesheet" href="css/hoadon.css">
+</head>
+<body>
+<div class="app">
+
+    <aside class="sidebar">
+        <div>
+            <h2>QUẢN LÝ NHÀ TRỌ</h2>
+            <div class="user">Xin chào, <span id="helloUser">ADMIN</span></div>
+
+            <ul class="menu">
+                <li><a href="trangchu.html">Trang chủ</a></li>
+                <li><a href="quanliphong.html">Quản lí phòng</a></li>
+                <li><a href="quanlikhachthue.html">Khách thuê</a></li>
+                <li><a href="hopdong.html">Hợp đồng</a></li>
+                <li class="active"><a href="hoadon.html">Hóa đơn</a></li>
+                <li><a href="chiso.html">Chỉ số</a></li>
+                <li><a href="dichvu.html">Dịch vụ</a></li>
+                <li><a href="thanhtoan.html">Thanh toán</a></li>
+            </ul>
+        </div>
+
+        <div class="logout" id="logoutBtn">Đăng xuất</div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <div>
+                <h1>Hóa đơn</h1>
+                <p class="page-subtitle">Danh sách hóa đơn</p>
+            </div>
+            <button class="btn btn-primary" id="btnCreateInvoice" type="button">+ Tạo hóa đơn</button>
+        </div>
+
+        <div class="filter-bar invoice-filter-bar">
+            <div class="filter-item">
+                <label for="fStatus">Trạng thái</label>
+                <select id="fStatus">
+                    <option value="">Tất cả</option>
+                    <option value="UNPAID">Chưa thanh toán</option>
+                    <option value="PAID">Đã thanh toán</option>
+                </select>
+            </div>
+
+            <div class="filter-item">
+                <label for="fRoom">Phòng</label>
+                <select id="fRoom"><option value="">Tất cả</option></select>
+            </div>
+
+            <div class="filter-item">
+                <label for="fPeriod">Kỳ (YYYY-MM)</label>
+                <input id="fPeriod" type="text" placeholder="nhập kì hóa đơn">
+            </div>
+
+            <div class="filter-item filter-actions">
+                <label>&nbsp;</label>
+                <button class="btn-reset" id="btnResetFilter" type="button">Làm mới</button>
+            </div>
+        </div>
+
+        <section class="invoice-section">
+            <div class="invoice-section-head">
+                <div>
+                    <h3>Danh sách hóa đơn</h3>
+                    <p id="invoiceCountText">0 hóa đơn được tìm thấy</p>
+                </div>
+            </div>
+
+            <div class="list-table-wrap">
+                <table class="list-table invoice-table">
+                    <thead>
+                    <tr>
+                        <th>Phòng</th>
+                        <th>Kỳ hóa đơn</th>
+                        <th>Ngày lập</th>
+                        <th>Tổng tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody id="invoiceList"></tbody>
+                </table>
+            </div>
+            <div id="emptyState" class="empty-state" style="display:none;">Không có hóa đơn phù hợp bộ lọc.</div>
+
+            <div class="table-footer">
+                <span id="invoicePagingInfo">Hiển thị 0 hóa đơn</span>
+                <div class="pagination">
+                    <button id="prevPageBtn" type="button">Trước</button>
+                    <span id="pageInfo">Trang 1 / 1</span>
+                    <button id="nextPageBtn" type="button">Sau</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="modal" id="invoiceModal" aria-hidden="true">
+    <div class="modal-backdrop" id="invoiceBackdrop"></div>
+
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="invoiceTitle">
+        <div class="modal-header">
+            <div class="modal-title" id="invoiceTitle">Tạo hóa đơn</div>
+            <button class="modal-close" id="invoiceClose" aria-label="Đóng">×</button>
+        </div>
+
+        <div class="modal-body">
+            <form id="invoiceForm">
+                <input type="hidden" id="invId">
+                <input type="hidden" id="invContractId">
+
+                <div class="form-grid">
+                    <div class="form-row">
+                        <label>Phòng đang thuê</label>
+                        <select id="invRoom" required></select>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Kỳ hóa đơn (YYYY-MM)</label>
+                        <input id="invPeriod" type="text" placeholder="VD: 2026-03" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Ngày lập</label>
+                        <input id="invDate" type="date" required>
+                    </div>
+
+                    <div class="form-row">
+                        <label>Trạng thái</label>
+                        <select id="invStatus" required>
+                            <option value="UNPAID">Chưa thanh toán</option>
+                        </select>
+                    </div>
+                </div>
+
+                <hr style="margin:14px 0; border:none; border-top:1px solid #eee;">
+                <div id="invoicePreviewBox" class="invoice-preview-box">
+                    <p><b>Đại diện:</b> <span id="previewRep">-</span></p>
+                    <p><b>Tiền phòng:</b> <span id="previewRent">0 đ</span></p>
+                    <p><b>Tiền điện:</b> <span id="previewElec">0 đ</span></p>
+                    <p><b>Tiền nước:</b> <span id="previewWater">0 đ</span></p>
+                    <p><b>Tiền dịch vụ:</b> <span id="previewService">0 đ</span></p>
+                    <p><b>Tổng tiền:</b> <span id="previewTotal">0 đ</span></p>
+                    <p style="font-size:13px;color:#6b7280;">Điện nước được lấy từ chỉ số theo kỳ. Dịch vụ được cộng từ danh sách dịch vụ đang gán cho phòng.</p>
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline" type="button" id="invoiceCancel">Đóng</button>
+            <button class="btn btn-primary" type="button" id="invoiceSave">Lưu</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="detailModal" aria-hidden="true">
+    <div class="modal-backdrop" id="detailBackdrop"></div>
+
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <div class="modal-header">
+            <div class="modal-title" id="detailTitle">Chi tiết hóa đơn</div>
+            <button class="modal-close" id="detailClose" aria-label="Đóng">×</button>
+        </div>
+
+        <div class="modal-body" id="detailBody"></div>
+
+        <div class="modal-footer">
+            <button class="btn btn-outline" type="button" id="detailOk">Đóng</button>
+        </div>
+    </div>
+</div>
+
+<script src="../js/config.js"></script>
+<script src="../js/ui-helpers.js"></script>
+<script src="../js/core/modal.js"></script>
+<script src="../js/core/paged-table.js"></script>
+<script src="../js/core/page-filters.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/hoadon.js"></script>
+</body>
+</html>

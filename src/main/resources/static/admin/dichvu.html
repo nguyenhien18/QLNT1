@@ -1,0 +1,85 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin - Dịch vụ</title>
+    <link rel="stylesheet" href="css/dichvu.css">
+</head>
+
+<body>
+<div class="app">
+
+    <aside class="sidebar">
+        <h2>QUẢN LÝ NHÀ TRỌ</h2>
+        <div class="user">Xin chào, <span id="helloUser">ADMIN</span></div>
+
+        <ul class="menu">
+            <li><a href="trangchu.html">Trang chủ</a></li>
+                        <li><a href="quanliphong.html">Quản lí phòng</a></li>
+            <li><a href="quanlikhachthue.html">Khách thuê</a></li>
+            <li><a href="hopdong.html">Hợp đồng</a></li>
+            <li><a href="hoadon.html">Hóa đơn</a></li>
+            <li><a href="chiso.html">Chỉ số</a></li>
+            <li class="active"><a href="dichvu.html">Dịch vụ</a></li>
+            <li><a href="thanhtoan.html">Thanh toán</a></li>
+        </ul>
+
+        <div class="logout" id="logoutBtn">Đăng xuất</div>
+    </aside>
+
+    <main class="main">
+        <div class="page-header">
+            <h1>Quản lý dịch vụ</h1>
+            <button class="btn-add" id="addServiceBtn" type="button">+ Thêm dịch vụ mới</button>
+        </div>
+
+        <div id="serviceList"></div>
+    </main>
+</div>
+
+<!-- ===== MODAL THÊM/SỬA DỊCH VỤ ===== -->
+<div class="modal" id="serviceModal" aria-hidden="true">
+    <div class="modal-backdrop" id="serviceBackdrop"></div>
+
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="serviceTitle">
+        <div class="modal-header">
+            <div id="serviceTitle">Thêm dịch vụ mới</div>
+            <button class="modal-close" id="serviceClose" aria-label="Đóng">×</button>
+        </div>
+
+        <div class="modal-body">
+            <form id="serviceForm">
+                <input type="hidden" id="serviceId" />
+
+                <div class="form-row">
+                    <label for="serviceName">Tên dịch vụ</label>
+                    <input id="serviceName" type="text" placeholder="nhập tên dịch vụ" required />
+                </div>
+
+                <div class="form-row">
+                    <label for="servicePrice">Giá</label>
+                    <input id="servicePrice" type="number" min="0" step="1" placeholder="nhập giá" required />
+                    <div class="hint">Nhập số (không cần dấu chấm). Ví dụ: 50000</div>
+                </div>
+
+                <div class="form-row">
+                    <label for="serviceUnit">Đơn vị (tuỳ chọn)</label>
+                    <input id="serviceUnit" type="text" placeholder=" / tháng, / kWh, / m³..." />
+                </div>
+            </form>
+        </div>
+
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="serviceCancel">Đóng</button>
+            <button type="button" class="btn btn-primary" id="serviceSave">Lưu</button>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ ĐẶT SCRIPT Ở CUỐI FILE (SAU MODAL) -->
+<script src="../js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/dichvu.js"></script>
+</body>
+</html>

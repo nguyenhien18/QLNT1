@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Admin - Trang chủ</title>
+    <link rel="stylesheet" href="css/trangchu.css">
+</head>
+<body>
+<div class="app">
+
+    <aside class="sidebar">
+        <h2>QUẢN LÝ NHÀ TRỌ</h2>
+        <div class="user">Xin chào, <span id="helloUser">ADMIN</span></div>
+
+        <ul class="menu">
+            <li class="active"><a href="trangchu.html">Trang chủ</a></li>
+                        <li><a href="quanliphong.html">Quản lí phòng</a></li>
+            <li><a href="quanlikhachthue.html">Khách thuê</a></li>
+            <li><a href="hopdong.html">Hợp đồng</a></li>
+            <li><a href="hoadon.html">Hóa đơn</a></li>
+            <li><a href="chiso.html">Chỉ số</a></li>
+            <li><a href="dichvu.html">Dịch vụ</a></li>
+            <li><a href="thanhtoan.html">Thanh toán</a></li>
+        </ul>
+
+        <div class="logout" id="logoutBtn">Đăng xuất</div>
+    </aside>
+
+    <main class="main">
+        <div class="dashboard-head">
+            <h1>Dashboard</h1>
+            <p>Tổng quan hệ thống quản lý phòng trọ</p>
+        </div>
+
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Tổng số phòng</div>
+                <div class="stat-value" id="totalRooms">0</div>
+                <div class="stat-sub" id="totalRoomsSub">0 đang thuê</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Phòng trống</div>
+                <div class="stat-value text-green" id="emptyRooms">0</div>
+                <div class="stat-sub" id="emptyRoomsSub">0.0% tổng phòng</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Doanh thu tháng</div>
+                <div class="stat-value" id="monthlyRevenue">0 đ</div>
+                <div class="stat-sub">Tổng doanh thu tháng hiện tại</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Doanh thu năm</div>
+                <div class="stat-value" id="yearRevenue">0 đ</div>
+                <div class="stat-sub">Tổng doanh thu trong năm</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Hóa đơn sắp đến hạn</div>
+                <div class="stat-value text-orange" id="dueBills">0</div>
+                <div class="stat-sub">Cần theo dõi</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Hợp đồng sắp hết hạn</div>
+                <div class="stat-value text-yellow" id="expiringContracts">0</div>
+                <div class="stat-sub">Cần gia hạn</div>
+            </div>
+        </section>
+    </main>
+
+</div>
+
+<script src="../js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/trangchu.js"></script>
+</body>
+</html>

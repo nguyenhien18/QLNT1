@@ -1,0 +1,60 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
+
+:root{
+  --bg:#f4f6f8;--panel:#fff;--panelSoft:#f8fafc;--text:#111827;--muted:#6b7280;--border:#e5e7eb;
+  --sidebar:#2c3e50;--sidebarText:#ecf0f1;--primary:#2f80ed;--primarySoft:#eaf2ff;
+  --danger:#dc2626;--dangerSoft:#fef2f2;--success:#166534;--successSoft:#ecfdf5;
+  --warning:#9a3412;--warningSoft:#fff7ed;--radius:14px;--shadow:0 10px 28px rgba(15,23,42,.08)
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',Arial,Helvetica,sans-serif}
+.app{display:flex;min-height:100vh}
+.sidebar{width:240px;flex:0 0 240px;background:var(--sidebar);color:var(--sidebarText);padding:18px 16px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow:auto}
+.sidebar h2{font-size:16px;font-weight:800;margin-bottom:8px}
+.user{font-size:13px;color:rgba(236,240,241,.78);margin-bottom:14px}
+.menu{list-style:none;display:flex;flex-direction:column;gap:6px}.menu a{display:block;padding:10px 12px;border-radius:10px;color:var(--sidebarText);text-decoration:none;font-size:14px}
+.menu a:hover,.menu li.active a{background:rgba(255,255,255,.12)}
+.logout{margin-top:auto;padding:10px 12px;border-radius:10px;color:#fecaca;cursor:pointer}.logout:hover{background:rgba(255,255,255,.08)}
+.main{flex:1;min-width:0;padding:24px 28px}.page-header{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px}.page-header h1{font-size:28px;font-weight:900}.subtext{margin-top:6px;font-size:14px;color:var(--muted)}
+.card,.contract-card,.invoice-card,.meter-card,.pay-card,.profile-panel{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+.card,.contract-card,.invoice-card,.meter-card,.pay-card,.profile-panel{transition:box-shadow .2s ease,transform .2s ease}
+.card:hover,.contract-card:hover,.invoice-card:hover,.meter-card:hover,.pay-card:hover,.profile-panel:hover{box-shadow:0 14px 30px rgba(15,23,42,.12)}
+.btn,.btn-primary,.btn-outline,.btn-reset,.btn-momo{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 16px;border-radius:10px;border:1px solid transparent;font-size:14px;font-weight:800;cursor:pointer;text-decoration:none}
+.btn-primary,.btn-momo{background:var(--primary);color:#fff}.btn-outline{background:#fff;color:#0f172a;border-color:#cfd8e3}.btn-reset{background:#f3f4f6;color:#111827;border-color:var(--border)}
+label,.form-label{display:block;margin-bottom:6px;font-size:13px;font-weight:800;color:var(--muted)}
+input,select,.input{width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:#fff;outline:none;font-size:14px;color:var(--text)}
+input:focus,select:focus,.input:focus{border-color:rgba(47,128,237,.55);box-shadow:0 0 0 4px rgba(47,128,237,.12)}
+.table{width:100%;border-collapse:separate;border-spacing:0;table-layout:fixed}.table th,.table td{padding:14px 12px;border-bottom:1px solid var(--border);font-size:14px;text-align:left;vertical-align:top;word-break:break-word}.table th{background:#f8fafc;color:#334155;font-weight:900;position:sticky;top:0;z-index:2}
+.table tbody tr:hover{background:var(--panelSoft)}
+.badge,.status,.tag,.pill,.invoice-status{display:inline-flex;align-items:center;justify-content:center;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid transparent;white-space:nowrap;letter-spacing:.2px}
+.badge,.status-done,.status-paid{background:var(--successSoft);color:var(--success);border-color:#bbf7d0}.status-pending,.status-unpaid{background:var(--warningSoft);color:var(--warning);border-color:#fed7aa}
+.filter-bar{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;box-shadow:var(--shadow);margin-bottom:18px;max-width:1100px}
+.filter-item{display:flex;flex-direction:column;gap:6px;min-width:0}.filter-actions{display:flex;align-items:end}.filter-actions button{width:100%}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}.profile-col{display:flex;flex-direction:column;gap:20px}.p-label{font-size:16px;font-weight:900;margin-bottom:8px}.p-value{font-size:16px;color:#374151;line-height:1.55}
+.meter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;max-width:1100px}.meter-head,.pay-head,.contract-head,.invoice-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.meter-title,.pay-title,.contract-title,.invoice-title{font-size:18px;font-weight:900}
+.meter-row,.pay-row,.c-row,.i-row,.momo-row{display:flex;justify-content:space-between;gap:12px;font-size:14px}.k,.c-k,.i-k{color:var(--muted);font-weight:800}.v,.c-v,.i-v{font-weight:900}
+.meter-total,.i-total{margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);display:flex;justify-content:space-between;font-size:15px;font-weight:900}
+.contract-inner,.invoice-inner{border:1px solid var(--border);border-radius:12px;padding:16px;background:#fff;max-width:860px}.contract-body,.invoice-body,.pay-body{display:flex;flex-direction:column;gap:10px}
+.modal{display:none;position:fixed;inset:0;z-index:9999}.modal.show{display:block}.modal-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.48)}.modal-dialog{position:relative;width:min(520px,calc(100vw - 32px));margin:56px auto;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.22);overflow:hidden}.modal-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)}.modal-title{font-size:18px;font-weight:900}.modal-close{width:36px;height:36px;border:none;background:transparent;border-radius:10px;font-size:24px;cursor:pointer}.modal-body{padding:16px}.momo-logo{display:flex;justify-content:center;margin:10px 0 14px}.momo-logo-box{width:160px;height:48px;border:1px dashed #cbd5e1;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#64748b;font-weight:700}.momo-actions,.invoice-actions,.contract-actions,.pay-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}.empty-state,.card-empty{background:#fff;border:1px dashed #d6dde7;border-radius:14px;padding:18px;color:var(--muted);text-align:center;max-width:1100px}
+.row-right,.row-left{display:flex;margin:6px 0 18px}.row-right{justify-content:flex-end}.row-left{justify-content:flex-start}.link{color:var(--primary);text-decoration:none;font-weight:700;font-size:14px}.link:hover{text-decoration:underline}.help{display:block;margin-top:8px;color:var(--muted);font-size:12px}.msg{margin-top:14px;padding:10px 12px;border-radius:10px;font-size:14px;display:none}.msg.ok{display:block;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}.msg.err{display:block;background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+.action-group{display:flex;gap:8px;flex-wrap:wrap}
+.text-muted{color:var(--muted)}
+@media (max-width:900px){.profile-grid{grid-template-columns:1fr}.app{flex-direction:column}.sidebar{width:100%;height:auto;position:static}.main{padding:16px}.page-header h1{font-size:24px}.filter-bar{grid-template-columns:1fr}.contract-inner,.invoice-inner{max-width:none}}
+
+.profile-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;max-width:1100px}.profile-item{padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:#f8fafc}.profile-item strong{display:block;color:#6b7280;font-size:13px;margin-bottom:8px}.room-name-text{font-weight:800;color:#0f172a}.modal-dialog-narrow{width:min(420px,calc(100vw - 32px))}
+
+.table td:last-child{padding-right:16px}
+.action-group{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:nowrap}
+.btn-small,.action-group .btn-small{
+  min-width:62px !important;
+  height:30px !important;
+  padding:0 10px !important;
+  border-radius:8px !important;
+  font-size:12px !important;
+  font-weight:700 !important;
+  line-height:30px !important;
+  white-space:nowrap;
+}
+
+
