@@ -39,7 +39,9 @@
         <div class="filter-bar contract-filter-bar">
             <div class="filter-item">
                 <label for="fContractRoom">Phòng</label>
-                <input id="fContractRoom" type="text" placeholder="Nhập tên phòng">
+                <select id="fContractRoom">
+                    <option value="">Tat ca</option>
+                </select>
             </div>
 
             <div class="filter-item">
@@ -58,7 +60,7 @@
             </div>
         </div>
 
-        <section class="contract-section">
+        <section class="contract-section pagination-page">
             <div class="contract-section-head">
                 <div>
                     <h3>Danh sách hợp đồng</h3>
@@ -66,7 +68,7 @@
                 </div>
             </div>
 
-            <div class="list-table-wrap">
+            <div class="list-table-wrap pagination-content">
                 <table class="list-table contract-table">
                     <thead>
                     <tr>
@@ -85,7 +87,7 @@
                 </table>
             </div>
 
-            <div class="table-footer">
+            <div class="table-footer sticky-pagination">
                 <span id="contractPagingInfo">Hiển thị 0 hợp đồng</span>
                 <div class="pagination">
                     <button id="prevPageBtn" type="button">Trước</button>
@@ -162,12 +164,17 @@
     </div>
 </div>
 
-<script src="../js/config.js"></script>
-<script src="../js/ui-helpers.js"></script>
-<script src="../js/core/modal.js"></script>
-<script src="../js/core/paged-table.js"></script>
-<script src="../js/core/page-filters.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/hopdong.js"></script>
+<script src="../js/config.js?v=20260508port8087fix2"></script>
+<script src="../js/ui-helpers.js?v=20260428fix"></script>
+<script src="../js/core/modal.js?v=20260428fix"></script>
+<script src="../js/core/page-filters.js?v=20260428fix"></script>
+<script src="../js/core/auth-session.js?v=20260508sessionfix1"></script>
+<script src="js/auth.js?v=20260508authhotfix2"></script>
+<script src="js/hopdong.js?v=20260513roomfilter1"></script>
 </body>
 </html>
+
+
+
+
+

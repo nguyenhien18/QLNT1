@@ -1,18 +1,16 @@
 package com.quanlynhatro.entity;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Entity
-@Table(name = "dich_vu")
+import jakarta.persistence.*;
+import lombok.*;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "dich_vu")
 public class DichVu {
 
     @Id
@@ -25,7 +23,7 @@ public class DichVu {
 
     @Column(name = "gia_dich_vu", nullable = false, precision = 12, scale = 2)
     private BigDecimal giaDichVu;
+
+    @Column(name = "don_vi_tinh", length = 50)
+    private String donViTinh;
 }
-
-
-

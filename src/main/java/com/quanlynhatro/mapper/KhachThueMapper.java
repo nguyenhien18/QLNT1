@@ -1,12 +1,13 @@
 package com.quanlynhatro.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.quanlynhatro.dto.response.KhachThueResponse;
 import com.quanlynhatro.entity.KhachThue;
-import org.springframework.stereotype.Component;
 
 @Component
 public class KhachThueMapper {
-    public KhachThueResponse toResponse(KhachThue entity) {
+    public KhachThueResponse toKhachThueResponse(KhachThue entity) {
         return new KhachThueResponse(
                 entity.getKhachThueId(),
                 entity.getHoTen(),

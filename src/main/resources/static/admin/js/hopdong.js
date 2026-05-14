@@ -1,79 +1,43 @@
-const { api, money: fmtMoney, date: fmtDate, todayISO, labels } = window.AppUtils || {};
+(function () {
+const { api: apiClient, money: fmtMoney, date: fmtDate, todayISO, labels } = window.AppUtils || {};
 const { escapeHtml, textOrDash } = window.UiHelpers || {};
-const { bindChanges, bindInputs, bindPagination } = window.PageFilters || {};
+const { bindChanges, bindPagination } = window.PageFilters || {};
 
 const $ = (id) => document.getElementById(id);
 const PAGE_SIZE = 4;
+const LARGE_PAGE_SIZE = 1000;
+
 let page = 1;
 let totalPages = 1;
 let totalItems = 0;
 let contracts = [];
-let allContracts = [];
 let rooms = [];
-let tenants = [];
-let members = [];
 let baseAvailableRooms = [];
+let filterRoomNames = [];
+let tenants = [];
 let selectedMemberIds = [];
-let activeContractIds = new Set();
+let memberMap = new Map();
 
-function badgeStatus(s) {
-  if (s === "CON_HIEU_LUC") return `<span class="badge badge-green">${labels?.contractStatus(s) || "Còn hiệu lực"}</span>`;
-  if (s === "HET_HIEU_LUC") return `<span class="badge badge-wait">${labels?.contractStatus(s) || "Hết hiệu lực"}</span>`;
-  return `<span class="badge badge-red">${labels?.contractStatus(s) || "Đã hủy"}</span>`;
+function badgeStatus(status) {
+  if (status === "CON_HIEU_LUC") return `<span class="badge badge-green">${labels?.contractStatus(status) || "Con hieu luc"}</span>`;
+  if (status === "HET_HIEU_LUC") return `<span class="badge badge-wait">${labels?.contractStatus(status) || "Het hieu luc"}</span>`;
+  return `<span class="badge badge-red">${labels?.contractStatus(status) || "Da huy"}</span>`;
 }
-function displayText(value) { return textOrDash ? textOrDash(value) : (value ? value : '<span class="text-muted">-</span>'); }
+
+function displayText(value) {
+  return textOrDash ? textOrDash(value) : (value ? value : '<span class="text-muted">-</span>');
+}
+
 function openModal() { window.Modal?.open("contractModal"); }
 function closeModal() { window.Modal?.close("contractModal"); }
 function isPastOrToday(isoDate) { return !!isoDate && isoDate <= todayISO(); }
-function canCancelContract(c) { return c?.trangThai === "CON_HIEU_LUC" && !isPastOrToday(c.ngayBatDau); }
-function canEndContract(c) { return c?.trangThai === "CON_HIEU_LUC" && isPastOrToday(c.ngayBatDau); }
-function canEditContract(c) { return c?.trangThai === "CON_HIEU_LUC" && !isPastOrToday(c.ngayBatDau); }
-
-function rebuildActiveContractIds() {
-  activeContractIds = new Set(
-    (allContracts || [])
-      .filter((c) => c?.trangThai === "CON_HIEU_LUC")
-      .map((c) => Number(c.hopDongId))
-      .filter((id) => Number.isFinite(id))
-  );
-}
-
-function isActiveContractId(hopDongId) {
-  const id = Number(hopDongId);
-  return Number.isFinite(id) && activeContractIds.has(id);
-}
-
-function activeTenantIds(currentContractId = null) {
-  const ids = new Set();
-  const editingContractId = Number(currentContractId || 0);
-
-  // Dai dien trong hop dong active
-  (allContracts || []).forEach((c) => {
-    const id = Number(c?.hopDongId);
-    if (!isActiveContractId(id)) return;
-    if (editingContractId && id === editingContractId) return;
-    const repId = Number(c?.khachThue?.khachThueId);
-    if (Number.isFinite(repId) && repId > 0) {
-      ids.add(repId);
-    }
-  });
-
-  // Thanh vien o cung trong hop dong active
-  members.forEach((m) => {
-    const hdId = Number(m?.hopDong?.hopDongId);
-    if (!isActiveContractId(hdId)) return;
-    if (editingContractId && hdId === editingContractId) return;
-    const tenantId = Number(m?.khachThue?.khachThueId);
-    if (Number.isFinite(tenantId) && tenantId > 0) {
-      ids.add(tenantId);
-    }
-  });
-  return ids;
-}
+function canCancelContract(contract) { return contract?.trangThai === "CON_HIEU_LUC" && !isPastOrToday(contract.ngayBatDau); }
+function canEndContract(contract) { return contract?.trangThai === "CON_HIEU_LUC" && isPastOrToday(contract.ngayBatDau); }
+function canEditContract(contract) { return contract?.trangThai === "CON_HIEU_LUC" && !isPastOrToday(contract.ngayBatDau); }
 
 function getSelectedRoom() {
   const roomId = Number($("contractRoom").value || 0);
-  return rooms.find((r) => r.phongTroId === roomId) || null;
+  return rooms.find((room) => room.phongTroId === roomId) || null;
 }
 
 function maxCompanionsAllowed() {
@@ -82,17 +46,28 @@ function maxCompanionsAllowed() {
   return cap > 0 ? Math.max(0, cap - 1) : 0;
 }
 
+function memberNames(contractId) {
+  return (memberMap.get(Number(contractId)) || [])
+    .filter((member) => member?.vaiTro === "O_CUNG")
+    .map((member) => member?.hoTen)
+    .filter(Boolean)
+    .join(", ");
+}
+
 function renderMemberPicker() {
   const picker = $("memberPicker");
   if (!picker) return;
-  const repId = Number($("contractRep").value || 0);
-  const currentId = Number($("contractId").value || 0);
-  const occupiedIds = activeTenantIds(currentId);
 
-  picker.innerHTML = '<option value="">-- Chọn khách thuê ở cùng --</option>' + tenants
-    .filter((t) => t.khachThueId !== repId)
-    .filter((t) => !occupiedIds.has(t.khachThueId) || selectedMemberIds.includes(t.khachThueId))
-    .map((t) => `<option value="${t.khachThueId}" ${selectedMemberIds.includes(t.khachThueId) ? "disabled" : ""}>${escapeHtml ? escapeHtml(t.hoTen || "") : (t.hoTen || "")} - ${escapeHtml ? escapeHtml(t.sdt || t.email || "") : (t.sdt || t.email || "")}</option>`)
+  const repId = Number($("contractRep").value || 0);
+  picker.innerHTML = '<option value="">-- Chon khach thue o cung --</option>' + tenants
+    .filter((tenant) => Number(tenant.khachThueId) !== repId)
+    .map((tenant) => {
+      const id = Number(tenant.khachThueId);
+      const disabled = selectedMemberIds.includes(id) ? "disabled" : "";
+      const name = escapeHtml ? escapeHtml(tenant.hoTen || "") : (tenant.hoTen || "");
+      const contact = escapeHtml ? escapeHtml(tenant.sdt || tenant.email || "") : (tenant.sdt || tenant.email || "");
+      return `<option value="${id}" ${disabled}>${name} - ${contact}</option>`;
+    })
     .join("");
 }
 
@@ -101,43 +76,101 @@ function renderSelectedMembers() {
   if (!box) return;
 
   box.innerHTML = selectedMemberIds.map((id) => {
-    const t = tenants.find((x) => x.khachThueId === id);
-    if (!t) return "";
-    return `<div class="member-chip"><span>${escapeHtml ? escapeHtml(t.hoTen || "") : (t.hoTen || "")} - ${escapeHtml ? escapeHtml(t.sdt || t.email || "") : (t.sdt || t.email || "")}</span><button type="button" class="remove-member-btn" data-id="${id}">Xóa</button></div>`;
+    const tenant = tenants.find((item) => Number(item.khachThueId) === Number(id));
+    if (!tenant) return "";
+    const name = escapeHtml ? escapeHtml(tenant.hoTen || "") : (tenant.hoTen || "");
+    const contact = escapeHtml ? escapeHtml(tenant.sdt || tenant.email || "") : (tenant.sdt || tenant.email || "");
+    return `<div class="member-chip"><span>${name} - ${contact}</span><button type="button" class="remove-member-btn" data-id="${id}">Xoa</button></div>`;
   }).join("");
 
   const room = getSelectedRoom();
   const max = Number(room?.sucChua || 0);
-  $("memberLimitText").textContent = room ? `Đang chọn ${1 + selectedMemberIds.length}/${max} người` : "Chọn phòng để thêm người ở cùng";
+  $("memberLimitText").textContent = room
+    ? `Dang chon ${1 + selectedMemberIds.length}/${max} nguoi`
+    : "Chon phong de them nguoi o cung";
   renderMemberPicker();
 }
 
 function renderOptions(selectedRoomId = "", selectedRepId = "") {
-  const currentId = Number($("contractId").value || 0);
-  const occupiedIds = activeTenantIds(currentId);
-
-  $("contractRoom").innerHTML = '<option value="">-- Chọn phòng --</option>' + rooms
-    .map((r) => `<option value="${r.phongTroId}" ${String(selectedRoomId) === String(r.phongTroId) ? "selected" : ""}>${escapeHtml ? escapeHtml(r.tenPhong || "") : (r.tenPhong || "")} - ${Number(r.giaThue || 0).toLocaleString("vi-VN")} đ</option>`)
+  $("contractRoom").innerHTML = '<option value="">-- Chon phong --</option>' + rooms
+    .map((room) => {
+      const selected = String(selectedRoomId) === String(room.phongTroId) ? "selected" : "";
+      const roomName = escapeHtml ? escapeHtml(room.tenPhong || "") : (room.tenPhong || "");
+      const rent = Number(room.giaThue || 0).toLocaleString("vi-VN");
+      return `<option value="${room.phongTroId}" ${selected}>${roomName} - ${rent} d</option>`;
+    })
     .join("");
 
-  $("contractRep").innerHTML = '<option value="">-- Chọn khách thuê đại diện --</option>' + tenants
-    .filter((t) => !occupiedIds.has(t.khachThueId) || String(selectedRepId) === String(t.khachThueId))
-    .map((t) => `<option value="${t.khachThueId}" ${String(selectedRepId) === String(t.khachThueId) ? "selected" : ""}>${t.hoTen} - ${escapeHtml ? escapeHtml(t.tenDangNhap || "") : (t.tenDangNhap || "")}</option>`)
+  $("contractRep").innerHTML = '<option value="">-- Chon khach thue dai dien --</option>' + tenants
+    .map((tenant) => {
+      const selected = String(selectedRepId) === String(tenant.khachThueId) ? "selected" : "";
+      const name = escapeHtml ? escapeHtml(tenant.hoTen || "") : (tenant.hoTen || "");
+      const username = escapeHtml ? escapeHtml(tenant.tenDangNhap || "") : (tenant.tenDangNhap || "");
+      return `<option value="${tenant.khachThueId}" ${selected}>${name} - ${username}</option>`;
+    })
     .join("");
 
   renderSelectedMembers();
 }
 
+function renderContractRoomFilter() {
+  const roomFilter = $("fContractRoom");
+  if (!roomFilter) return;
+
+  const currentValue = roomFilter.value || "";
+  roomFilter.innerHTML = '<option value="">Tat ca</option>' + filterRoomNames
+    .map((roomName) => {
+      const safeRoomName = escapeHtml ? escapeHtml(roomName) : roomName;
+      return `<option value="${safeRoomName}">${safeRoomName}</option>`;
+    })
+    .join("");
+
+  if (currentValue && filterRoomNames.includes(currentValue)) {
+    roomFilter.value = currentValue;
+  }
+}
+
+async function loadAvailableTenants(hopDongId = null) {
+  const query = hopDongId ? `?hopDongId=${hopDongId}` : "";
+  tenants = await apiClient(`/api/hop-dong/khach-thue-trong${query}`).catch(() => []);
+}
+
 async function loadMeta() {
-  [allContracts, baseAvailableRooms, tenants, members] = await Promise.all([
-    window.fetchAllPages(api, "/api/hop-dong", { sortBy: "ngayBatDau", direction: "desc" }).catch(() => []),
-    api("/api/hop-dong/phong-trong").catch(() => []),
-    window.fetchAllPages(api, "/api/khach-thue", { sortBy: "khachThueId", direction: "desc" }).catch(() => []),
-    window.fetchAllPages(api, "/api/thanh-vien-phong", { sortBy: "thanhVienId", direction: "desc" }).catch(() => []),
+  const [availableRooms, roomSummary] = await Promise.all([
+    apiClient("/api/hop-dong/phong-trong").catch(() => []),
+    apiClient("/api/phong-tro/summary").catch(() => []),
   ]);
-  rebuildActiveContractIds();
+
+  await loadAvailableTenants();
+  baseAvailableRooms = availableRooms || [];
   rooms = [...baseAvailableRooms];
+  const roomSource = (roomSummary || []).length ? roomSummary : baseAvailableRooms;
+  filterRoomNames = [...new Set((roomSource || [])
+    .map((room) => String(room?.tenPhong || "").trim())
+    .filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "vi", { numeric: true, sensitivity: "base" }));
+  renderContractRoomFilter();
   renderOptions();
+}
+
+async function fetchMembersForContract(contractId) {
+  const pageData = await window.fetchPage(apiClient, `/api/thanh-vien-phong/hop-dong/${contractId}`, {
+    page: 0,
+    size: LARGE_PAGE_SIZE,
+    sortBy: "thanhVienId",
+    direction: "asc",
+  }).catch(() => ({ content: [] }));
+  return pageData.content || [];
+}
+
+async function loadMembersForCurrentPage() {
+  const entries = await Promise.all(
+    contracts.map(async (contract) => {
+      const items = await fetchMembersForContract(contract.hopDongId);
+      return [Number(contract.hopDongId), items];
+    }),
+  );
+  memberMap = new Map(entries);
 }
 
 async function loadList() {
@@ -145,7 +178,7 @@ async function loadList() {
   const status = $("fContractStatus").value;
 
   try {
-    const pageData = await window.fetchPage(api, "/api/hop-dong/search", {
+    const pageData = await window.fetchPage(apiClient, "/api/hop-dong/search", {
       page: page - 1,
       size: PAGE_SIZE,
       params: { room, status },
@@ -157,62 +190,56 @@ async function loadList() {
       page = totalPages;
       return loadList();
     }
-  } catch (err) {
-    console.error("Load hợp đồng search failed", err);
+    await loadMembersForCurrentPage();
+  } catch (error) {
+    console.error("Load hop dong search failed", error);
     contracts = [];
+    memberMap = new Map();
     totalItems = 0;
     totalPages = 1;
   }
   render();
 }
 
-function memberNames(contractId) {
-  return members
-    .filter((m) => m.hopDong?.hopDongId === contractId && m.vaiTro === "O_CUNG")
-    .map((m) => m.hoTen)
-    .join(", ");
-}
-
 function render() {
   const start = totalItems ? (page - 1) * PAGE_SIZE + 1 : 0;
   const end = Math.min(page * PAGE_SIZE, totalItems);
 
-  $("contractCountText").textContent = `${totalItems} hợp đồng được tìm thấy`;
-  $("contractPagingInfo").textContent = totalItems ? `Hiển thị ${start} - ${end} / ${totalItems} hợp đồng` : "Hiển thị 0 hợp đồng";
+  $("contractCountText").textContent = `${totalItems} hop dong duoc tim thay`;
+  $("contractPagingInfo").textContent = totalItems
+    ? `Hien thi ${start} - ${end} / ${totalItems} hop dong`
+    : "Hien thi 0 hop dong";
   $("pageInfo").textContent = `Trang ${page} / ${totalPages}`;
   $("prevPageBtn").disabled = page <= 1;
   $("nextPageBtn").disabled = page >= totalPages;
 
   const list = $("contractList");
   if (!totalItems) {
-    list.innerHTML = '<tr><td colspan="9" class="empty-cell">Không có hợp đồng phù hợp</td></tr>';
+    list.innerHTML = '<tr><td colspan="9" class="empty-cell">Khong co hop dong phu hop</td></tr>';
     return;
   }
 
-  const buildActionButtons = (c) => {
+  const buildActionButtons = (contract) => {
     const actions = [];
-    if (canEditContract(c)) actions.push(`<button class="btn-small btn-edit" data-act="edit" data-id="${c.hopDongId}">Sửa</button>`);
-    if (canCancelContract(c)) actions.push(`<button class="btn-small btn-delete" data-act="cancel" data-id="${c.hopDongId}">Hủy</button>`);
-    else if (canEndContract(c)) actions.push(`<button class="btn-small btn-delete" data-act="end" data-id="${c.hopDongId}">Kết thúc</button>`);
+    if (canEditContract(contract)) actions.push(`<button class="btn-small btn-edit" data-act="edit" data-id="${contract.hopDongId}">Sua</button>`);
+    if (canCancelContract(contract)) actions.push(`<button class="btn-small btn-delete" data-act="cancel" data-id="${contract.hopDongId}">Huy</button>`);
+    else if (canEndContract(contract)) actions.push(`<button class="btn-small btn-delete" data-act="end" data-id="${contract.hopDongId}">Ket thuc</button>`);
     return actions.length ? actions.join("") : '<span class="text-muted">-</span>';
   };
 
-  list.innerHTML = contracts.map((c) => `
-    <tr data-id="${c.hopDongId}">
-      <td class="name-cell">#${displayText(c.hopDongId)}</td>
-      <td class="name-cell">${displayText(c.phongTro?.tenPhong)}</td>
-      <td>${displayText(c.khachThue?.hoTen)}</td>
-      <td>${displayText(memberNames(c.hopDongId) || "Không có")}</td>
-      <td>${displayText(fmtDate(c.ngayBatDau))}</td>
-      <td>${displayText(fmtDate(c.ngayKetThuc))}</td>
-      <td>${fmtMoney(c.phongTro?.giaThue ?? c.tienCoc ?? 0)}</td>
-      <td>${badgeStatus(c.trangThai)}</td>
-      <td>
-        <div class="action-group">
-          ${buildActionButtons(c)}
-        </div>
-      </td>
-    </tr>`).join("");
+  list.innerHTML = contracts.map((contract) => `
+    <tr data-id="${contract.hopDongId}">
+      <td class="name-cell">#${displayText(contract.hopDongId)}</td>
+      <td class="name-cell">${displayText(contract.phongTro?.tenPhong)}</td>
+      <td>${displayText(contract.khachThue?.hoTen)}</td>
+      <td>${displayText(memberNames(contract.hopDongId) || "Khong co")}</td>
+      <td>${displayText(fmtDate(contract.ngayBatDau))}</td>
+      <td>${displayText(fmtDate(contract.ngayKetThuc))}</td>
+      <td>${fmtMoney(contract.phongTro?.giaThue ?? contract.tienCoc ?? 0)}</td>
+      <td>${badgeStatus(contract.trangThai)}</td>
+      <td><div class="action-group">${buildActionButtons(contract)}</div></td>
+    </tr>
+  `).join("");
 }
 
 function clearForm() {
@@ -225,22 +252,32 @@ function clearForm() {
   renderOptions();
 }
 
-function openEdit(c) {
-  $("contractTitle").textContent = "Cập nhật hợp đồng";
-  $("contractId").value = c.hopDongId;
-  $("contractStart").value = c.ngayBatDau || "";
-  $("contractEnd").value = c.ngayKetThuc || "";
-  $("contractDeposit").value = c.tienCoc || 0;
-  $("contractStatus").value = c.trangThai || "CON_HIEU_LUC";
-  selectedMemberIds = members
-    .filter((m) => m.hopDong?.hopDongId === c.hopDongId && m.vaiTro === "O_CUNG" && m.khachThue?.khachThueId)
-    .map((m) => Number(m.khachThue.khachThueId));
+async function openEdit(contract) {
+  $("contractTitle").textContent = "Cap nhat hop dong";
+  $("contractId").value = contract.hopDongId;
+  $("contractStart").value = contract.ngayBatDau || "";
+  $("contractEnd").value = contract.ngayKetThuc || "";
+  $("contractDeposit").value = contract.tienCoc || 0;
+  $("contractStatus").value = contract.trangThai || "CON_HIEU_LUC";
 
-  const editRooms = [...baseAvailableRooms];
-  if (!editRooms.find((r) => r.phongTroId === c.phongTro?.phongTroId) && c.phongTro) editRooms.unshift(c.phongTro);
-  rooms = editRooms;
+  let memberItems = memberMap.get(Number(contract.hopDongId));
+  if (!memberItems) {
+    memberItems = await fetchMembersForContract(contract.hopDongId);
+    memberMap.set(Number(contract.hopDongId), memberItems);
+  }
 
-  renderOptions(c.phongTro?.phongTroId || "", c.khachThue?.khachThueId || "");
+  selectedMemberIds = (memberItems || [])
+    .filter((member) => member?.vaiTro === "O_CUNG" && member?.khachThue?.khachThueId)
+    .map((member) => Number(member.khachThue.khachThueId));
+
+  const editableRooms = [...baseAvailableRooms];
+  if (!editableRooms.find((room) => room.phongTroId === contract.phongTro?.phongTroId) && contract.phongTro) {
+    editableRooms.unshift(contract.phongTro);
+  }
+  rooms = editableRooms;
+  await loadAvailableTenants(contract.hopDongId);
+
+  renderOptions(contract.phongTro?.phongTroId || "", contract.khachThue?.khachThueId || "");
   openModal();
 }
 
@@ -248,12 +285,16 @@ function addMember() {
   const room = getSelectedRoom();
   const repId = Number($("contractRep").value || 0);
   const memberId = Number($("memberPicker").value || 0);
-  if (!room) return alert("Vui lòng chọn phòng trước");
-  if (!repId) return alert("Vui lòng chọn người đại diện trước");
-  if (!memberId) return alert("Vui lòng chọn khách thuê ở cùng");
+
+  if (!room) return alert("Vui long chon phong truoc");
+  if (!repId) return alert("Vui long chon nguoi dai dien truoc");
+  if (!memberId) return alert("Vui long chon khach thue o cung");
   if (selectedMemberIds.includes(memberId)) return;
-  if (memberId === repId) return alert("Người đại diện không thể đồng thời là người ở cùng");
-  if (selectedMemberIds.length >= maxCompanionsAllowed()) return alert(`Phòng này chỉ cho tối đa ${room.sucChua} người`);
+  if (memberId === repId) return alert("Nguoi dai dien khong the dong thoi la nguoi o cung");
+  if (selectedMemberIds.length >= maxCompanionsAllowed()) {
+    return alert(`Phong nay chi cho toi da ${room.sucChua} nguoi`);
+  }
+
   selectedMemberIds.push(memberId);
   renderSelectedMembers();
 }
@@ -262,7 +303,10 @@ async function saveContract() {
   const roomId = Number($("contractRoom").value || 0);
   const repId = Number($("contractRep").value || 0);
   const memberIds = selectedMemberIds.filter((id) => id !== repId);
-  if (!roomId || !repId) return alert("Vui lòng chọn phòng và người đại diện");
+  if (!roomId || !repId) {
+    alert("Vui long chon phong va nguoi dai dien");
+    return;
+  }
 
   const body = {
     phongTroId: roomId,
@@ -280,52 +324,75 @@ async function saveContract() {
 
   try {
     if (id) {
-      await api(`/api/hop-dong/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      await apiClient(`/api/hop-dong/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
     } else {
-      await api("/api/hop-dong", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      await apiClient("/api/hop-dong", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
     }
     closeModal();
     clearForm();
     await loadMeta();
     await loadList();
-  } catch (e) {
-    alert("Lưu hợp đồng thất bại: " + e.message);
+  } catch (error) {
+    alert(`Luu hop dong that bai: ${error.message}`);
   }
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  $("addContractBtn")?.addEventListener("click", () => { clearForm(); $("contractTitle").textContent = "Tạo hợp đồng"; openModal(); });
+  $("addContractBtn")?.addEventListener("click", async () => {
+    await loadAvailableTenants();
+    clearForm();
+    $("contractTitle").textContent = "Tao hop dong";
+    openModal();
+  });
   $("contractClose")?.addEventListener("click", closeModal);
   $("contractCancel")?.addEventListener("click", closeModal);
   $("contractBackdrop")?.addEventListener("click", closeModal);
   $("contractSave")?.addEventListener("click", saveContract);
   $("addMemberBtn")?.addEventListener("click", addMember);
-  $("selectedMembersBox")?.addEventListener("click", (e) => {
-    const btn = e.target.closest(".remove-member-btn");
+  $("selectedMembersBox")?.addEventListener("click", (event) => {
+    const btn = event.target.closest(".remove-member-btn");
     if (!btn) return;
     const id = Number(btn.dataset.id);
-    selectedMemberIds = selectedMemberIds.filter((x) => x !== id);
+    selectedMemberIds = selectedMemberIds.filter((value) => value !== id);
     renderSelectedMembers();
   });
   $("contractRoom")?.addEventListener("change", renderSelectedMembers);
   $("contractRep")?.addEventListener("change", () => {
-    selectedMemberIds = selectedMemberIds.filter((id) => id !== Number($("contractRep").value || 0));
+    const repId = Number($("contractRep").value || 0);
+    selectedMemberIds = selectedMemberIds.filter((id) => id !== repId);
     renderSelectedMembers();
   });
-  bindInputs?.(["fContractRoom"], () => { page = 1; loadList(); });
-  bindChanges?.(["fContractStatus"], () => { page = 1; loadList(); });
-  $("resetContractFilter")?.addEventListener("click", () => { $("fContractRoom").value = ""; $("fContractStatus").value = ""; page = 1; loadList(); });
+
+  bindChanges?.(["fContractRoom", "fContractStatus"], () => {
+    page = 1;
+    loadList();
+  });
+  $("resetContractFilter")?.addEventListener("click", () => {
+    $("fContractRoom").value = "";
+    $("fContractStatus").value = "";
+    page = 1;
+    loadList();
+  });
   bindPagination?.("prevPageBtn", "nextPageBtn", {
     get page() { return page; },
     set page(v) { page = v; },
     get totalPages() { return totalPages; },
   }, loadList);
 
-  $("contractList")?.addEventListener("click", async (e) => {
-    const btn = e.target.closest("button[data-act]");
+  $("contractList")?.addEventListener("click", async (event) => {
+    const btn = event.target.closest("button[data-act]");
     if (!btn) return;
+
     const id = Number(btn.dataset.id);
-    const contract = contracts.find((x) => x.hopDongId === id);
+    const contract = contracts.find((item) => item.hopDongId === id);
     if (!contract) return;
 
     if (btn.dataset.act === "edit") {
@@ -333,22 +400,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         alert("Chi sua duoc hop dong con hieu luc va chua toi ngay hieu luc.");
         return;
       }
-      openEdit(contract);
+      await openEdit(contract);
       return;
     }
 
     if (btn.dataset.act === "cancel") {
       if (!canCancelContract(contract)) {
-        alert("Chỉ hủy được hợp đồng chưa tới ngày hiệu lực.");
+        alert("Chi huy duoc hop dong chua toi ngay hieu luc.");
         return;
       }
-      if (!confirm(`Hủy hợp đồng #${id}?`)) return;
+      if (!confirm(`Huy hop dong #${id}?`)) return;
       try {
-        await api(`/api/hop-dong/${id}/huy`, { method: "PUT", headers: { "Content-Type": "application/json" } });
+        await apiClient(`/api/hop-dong/${id}/huy`, { method: "PUT", headers: { "Content-Type": "application/json" } });
         await loadMeta();
         await loadList();
-      } catch (err) {
-        alert("Hủy hợp đồng thất bại: " + err.message);
+      } catch (error) {
+        alert(`Huy hop dong that bai: ${error.message}`);
       }
       return;
     }
@@ -360,11 +427,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
       if (!confirm(`Ket thuc hop dong #${id}?`)) return;
       try {
-        await api(`/api/hop-dong/${id}/ket-thuc`, { method: "PUT", headers: { "Content-Type": "application/json" } });
+        await apiClient(`/api/hop-dong/${id}/ket-thuc`, { method: "PUT", headers: { "Content-Type": "application/json" } });
         await loadMeta();
         await loadList();
-      } catch (err) {
-        alert("Ket thuc hop dong that bai: " + err.message);
+      } catch (error) {
+        alert(`Ket thuc hop dong that bai: ${error.message}`);
       }
     }
   });
@@ -373,4 +440,4 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadList();
 });
 
-
+})();

@@ -1,19 +1,17 @@
 package com.quanlynhatro.entity;
 
-import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-@Entity
-@Table(name = "hop_dong")
+import jakarta.persistence.*;
+import lombok.*;
+
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "hop_dong")
 public class HopDong {
 
     public enum TrangThai {
@@ -48,6 +46,3 @@ public class HopDong {
     @Column(name = "trang_thai", nullable = false)
     private TrangThai trangThai = TrangThai.CON_HIEU_LUC;
 }
-
-
-

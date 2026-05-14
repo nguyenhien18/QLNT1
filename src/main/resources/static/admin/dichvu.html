@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Admin - Dịch vụ</title>
-    <link rel="stylesheet" href="css/dichvu.css">
+    <link rel="stylesheet" href="css/dichvu.css?v=20260507fix2">
 </head>
 
 <body>
@@ -28,13 +28,24 @@
         <div class="logout" id="logoutBtn">Đăng xuất</div>
     </aside>
 
-    <main class="main">
+    <main class="main pagination-page">
         <div class="page-header">
             <h1>Quản lý dịch vụ</h1>
             <button class="btn-add" id="addServiceBtn" type="button">+ Thêm dịch vụ mới</button>
         </div>
 
+        <div class="table-controls">
+            <div class="table-info" id="serviceCountText">0 dich vu duoc tim thay</div>
+        </div>
         <div id="serviceList"></div>
+        <div class="table-footer sticky-pagination">
+            <div class="table-info" id="servicePagingInfo">Hien thi 0 dich vu</div>
+            <div class="pagination">
+                <button id="prevPageBtn" type="button">Truoc</button>
+                <span id="pageInfo">Trang 1 / 1</span>
+                <button id="nextPageBtn" type="button">Sau</button>
+            </div>
+        </div>
     </main>
 </div>
 
@@ -78,8 +89,16 @@
 </div>
 
 <!-- ✅ ĐẶT SCRIPT Ở CUỐI FILE (SAU MODAL) -->
-<script src="../js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/dichvu.js"></script>
+<script src="../js/config.js?v=20260508port8087fix2"></script>
+<script src="../js/core/modal.js?v=20260428fix"></script>
+<script src="../js/core/page-filters.js?v=20260428fix"></script>
+<script src="../js/core/auth-session.js?v=20260508sessionfix1"></script>
+<script src="js/auth.js?v=20260508authhotfix2"></script>
+<script src="js/dichvu.js?v=20260428fix"></script>
 </body>
 </html>
+
+
+
+
+

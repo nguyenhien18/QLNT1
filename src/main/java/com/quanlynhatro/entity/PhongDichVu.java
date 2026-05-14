@@ -1,17 +1,14 @@
 package com.quanlynhatro.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-@Entity
-@Table(name = "phong_dich_vu")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "phong_dich_vu")
 public class PhongDichVu {
 
     @EmbeddedId
@@ -27,6 +24,3 @@ public class PhongDichVu {
     @JoinColumn(name = "dich_vu_id", nullable = false)
     private DichVu dichVu;
 }
-
-
-

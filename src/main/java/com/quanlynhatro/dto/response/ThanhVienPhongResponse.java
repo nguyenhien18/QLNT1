@@ -2,10 +2,8 @@ package com.quanlynhatro.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 public class ThanhVienPhongResponse {
     private Long thanhVienId;
@@ -16,3 +14,4 @@ public class ThanhVienPhongResponse {
     private String cccd;
     private String vaiTro;
 }
+

@@ -1,31 +1,49 @@
-const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
-const role = localStorage.getItem("role");
-const token = localStorage.getItem("authToken");
-const fallbackName = localStorage.getItem("logged_in_user");
+(function () {
+  const LOGIN_URL = "../dangnhap/login.html";
+  const AUTH_SESSION_SRC = "../js/core/auth-session.js?v=20260508sessionfix1";
 
-if (!currentUser || role !== "ADMIN" || !token) {
-  localStorage.clear();
-  window.location.href = "../dangnhap/login.html";
-}
+  function redirectLogin() {
+    window.location.href = LOGIN_URL;
+  }
 
-window.buildAuthHeaders = function (headers = {}) {
-  return {
-    ...headers,
-    Authorization: `Bearer ${localStorage.getItem("authToken") || ""}`
-  };
-};
+  function initAuth() {
+    window.AuthSessionCore.init({
+      requiredRole: "ADMIN",
+      loginUrl: LOGIN_URL,
+      defaultName: "ADMIN",
+    });
+  }
 
-const hello = document.getElementById("helloUser");
-if (hello) {
-  hello.textContent = (currentUser && (currentUser.hoTen || currentUser.username)) || fallbackName || "ADMIN";
-}
+  function loadAuthSessionCore() {
+    return new Promise((resolve, reject) => {
+      const existing = document.querySelector('script[data-auth-session-core="1"]');
+      if (existing) {
+        existing.addEventListener("load", resolve, { once: true });
+        existing.addEventListener("error", reject, { once: true });
+        return;
+      }
 
-const logoutBtn = document.getElementById("logoutBtn");
-logoutBtn?.addEventListener("click", () => {
-  localStorage.removeItem("currentUser");
-  localStorage.removeItem("role");
-  localStorage.removeItem("logged_in_user");
-  localStorage.removeItem("authToken");
-  localStorage.removeItem("admin_invoice_focus");
-  window.location.href = "../dangnhap/login.html";
-});
+      const script = document.createElement("script");
+      script.src = AUTH_SESSION_SRC;
+      script.dataset.authSessionCore = "1";
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  (async () => {
+    try {
+      if (!window.AuthSessionCore?.init) {
+        await loadAuthSessionCore();
+      }
+      if (!window.AuthSessionCore?.init) {
+        redirectLogin();
+        return;
+      }
+      initAuth();
+    } catch (_) {
+      redirectLogin();
+    }
+  })();
+})();

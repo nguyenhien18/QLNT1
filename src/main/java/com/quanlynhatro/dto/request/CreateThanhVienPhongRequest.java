@@ -1,11 +1,10 @@
 package com.quanlynhatro.dto.request;
 
-import com.quanlynhatro.entity.ThanhVienPhong;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+import com.quanlynhatro.entity.ThanhVienPhong;
+
+@Data
 public class CreateThanhVienPhongRequest {
     private Long hopDongId;
     private Long khachThueId;

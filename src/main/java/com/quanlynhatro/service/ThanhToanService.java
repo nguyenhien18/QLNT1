@@ -1,13 +1,5 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
-import com.quanlynhatro.dto.response.PaymentListItemResponse;
-import com.quanlynhatro.entity.HoaDon;
-import com.quanlynhatro.entity.ThanhToan;
-import com.quanlynhatro.exception.AppException;
-import com.quanlynhatro.repository.HoaDonRepository;
-import com.quanlynhatro.repository.ThanhToanRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.function.Function;
@@ -15,16 +7,29 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.quanlynhatro.dto.response.PaymentListItemResponse;
+import com.quanlynhatro.entity.HoaDon;
+import com.quanlynhatro.entity.ThanhToan;
+import com.quanlynhatro.exception.AppException;
+import com.quanlynhatro.repository.HoaDonRepository;
+import com.quanlynhatro.repository.ThanhToanRepository;
+import com.quanlynhatro.util.PageableUtils;
+
 @Service
-@RequiredArgsConstructor
 public class ThanhToanService {
     private final ThanhToanRepository thanhToanRepository;
     private final HoaDonRepository hoaDonRepository;
+
+    public ThanhToanService(ThanhToanRepository thanhToanRepository, HoaDonRepository hoaDonRepository) {
+        this.thanhToanRepository = thanhToanRepository;
+        this.hoaDonRepository = hoaDonRepository;
+    }
 
     public List<ThanhToan> getAll() {
         return thanhToanRepository.findAll();
@@ -224,5 +229,3 @@ public class ThanhToanService {
         return parseTrangThai(normalized);
     }
 }
-
-

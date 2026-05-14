@@ -1,7 +1,18 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import jakarta.persistence.criteria.Predicate;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import com.quanlynhatro.dto.response.RoomSummaryResponse;
 import com.quanlynhatro.entity.ChuTro;
 import com.quanlynhatro.entity.HopDong;
@@ -13,23 +24,30 @@ import com.quanlynhatro.repository.HopDongRepository;
 import com.quanlynhatro.repository.PhongDichVuRepository;
 import com.quanlynhatro.repository.PhongTroRepository;
 import com.quanlynhatro.repository.ThanhVienPhongRepository;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.stream.Collectors;
-import org.springframework.data.domain.Page;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+import com.quanlynhatro.util.PageableUtils;
+import com.quanlynhatro.util.RoomTypeUtils;
 
 @Service
-@RequiredArgsConstructor
 public class PhongTroService {
     private final PhongTroRepository phongTroRepository;
     private final ChuTroRepository chuTroRepository;
     private final HopDongRepository hopDongRepository;
     private final ThanhVienPhongRepository thanhVienPhongRepository;
     private final PhongDichVuRepository phongDichVuRepository;
+
+    public PhongTroService(
+            PhongTroRepository phongTroRepository,
+            ChuTroRepository chuTroRepository,
+            HopDongRepository hopDongRepository,
+            ThanhVienPhongRepository thanhVienPhongRepository,
+            PhongDichVuRepository phongDichVuRepository
+    ) {
+        this.phongTroRepository = phongTroRepository;
+        this.chuTroRepository = chuTroRepository;
+        this.hopDongRepository = hopDongRepository;
+        this.thanhVienPhongRepository = thanhVienPhongRepository;
+        this.phongDichVuRepository = phongDichVuRepository;
+    }
 
     public List<PhongTro> getAll() {
         return phongTroRepository.findAll();
@@ -77,7 +95,7 @@ public class PhongTroService {
                     return new RoomSummaryResponse(
                             roomId,
                             room.getTenPhong(),
-                            room.getLoaiPhong(),
+                            RoomTypeUtils.canonicalizeForRead(room.getLoaiPhong()),
                             room.getGiaThue(),
                             room.getTrangThai() != null ? room.getTrangThai().name() : null,
                             room.getSucChua(),
@@ -111,22 +129,25 @@ public class PhongTroService {
     }
 
     public Page<PhongTro> getPageByTrangThai(String trangThai, Integer page, Integer size, String sortBy, String direction) {
-        return phongTroRepository.findByTrangThai(parseStatus(trangThai), PageableUtils.build(page, size, sortBy, direction, "phongTroId"));
+        return phongTroRepository.findByTrangThai(
+                parseStatus(trangThai),
+                PageableUtils.build(page, size, sortBy, direction, "phongTroId")
+        );
     }
 
     public Page<PhongTro> search(String name, String type, String status, String keyword, Integer page, Integer size) {
         String qName = name == null ? "" : name.trim().toLowerCase(Locale.ROOT);
-        String qType = type == null ? "" : type.trim();
+        String qType = normalizeRoomType(type);
         String qStatus = status == null ? "" : status.trim();
         String qKeyword = keyword == null ? "" : keyword.trim().toLowerCase(Locale.ROOT);
 
         Specification<PhongTro> spec = (root, query, cb) -> {
-            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>();
             if (!qName.isBlank()) {
                 predicates.add(cb.like(cb.lower(root.<String>get("tenPhong")), "%" + qName + "%"));
             }
             if (!qType.isBlank()) {
-                predicates.add(cb.equal(root.get("loaiPhong"), qType));
+                predicates.add(cb.equal(cb.upper(cb.coalesce(root.<String>get("loaiPhong"), "")), qType));
             }
             if (!qStatus.isBlank()) {
                 predicates.add(cb.equal(root.get("trangThai"), parseStatus(qStatus)));
@@ -139,7 +160,7 @@ public class PhongTroService {
                         cb.like(roomType, "%" + qKeyword + "%")
                 ));
             }
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         return phongTroRepository.findAll(spec, PageableUtils.build(page, size, "phongTroId", "desc", "phongTroId"));
@@ -147,6 +168,7 @@ public class PhongTroService {
 
     public PhongTro create(PhongTro phongTro) {
         phongTro.setChuTro(resolveChuTro(phongTro));
+        phongTro.setLoaiPhong(requireRoomType(phongTro.getLoaiPhong()));
         if (phongTro.getTrangThai() == null) {
             phongTro.setTrangThai(PhongTro.TrangThai.TRONG);
         } else if (phongTro.getTrangThai() == PhongTro.TrangThai.DA_CHO_THUE) {
@@ -173,14 +195,17 @@ public class PhongTroService {
     public void delete(Long id) {
         getById(id);
         if (hopDongRepository.existsByPhongTro_PhongTroId(id)) {
-            throw new AppException(HttpStatus.CONFLICT, "Khong the xoa phong da tung co hop dong. Hay ket thuc/huy hop dong va giu lichu sou phong");
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "Khong the xoa phong da tung co hop dong. Hay ket thuc/huy hop dong va giu lich su phong"
+            );
         }
         phongTroRepository.deleteById(id);
     }
 
     private void applyMutableFields(PhongTro target, PhongTro source) {
         target.setTenPhong(source.getTenPhong());
-        target.setLoaiPhong(source.getLoaiPhong());
+        target.setLoaiPhong(requireRoomType(source.getLoaiPhong()));
         target.setGiaThue(source.getGiaThue());
         target.setSucChua(source.getSucChua());
         target.setMoTa(source.getMoTa());
@@ -189,7 +214,7 @@ public class PhongTroService {
 
     private ChuTro resolveChuTro(PhongTro phongTro) {
         if (!hasChuTroId(phongTro)) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "Thiu thng tin chu tro");
+            throw new AppException(HttpStatus.BAD_REQUEST, "Thieu thong tin chu tro");
         }
 
         Long chuTroId = phongTro.getChuTro().getChuTroId();
@@ -220,7 +245,7 @@ public class PhongTroService {
     private boolean hasActiveContract(Long phongTroId) {
         return hopDongRepository.existsByPhongTro_PhongTroIdAndTrangThai(
                 phongTroId,
-                com.quanlynhatro.entity.HopDong.TrangThai.CON_HIEU_LUC
+                HopDong.TrangThai.CON_HIEU_LUC
         );
     }
 
@@ -231,6 +256,20 @@ public class PhongTroService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Trang thai phong khong hop le");
         }
     }
+
+    private String normalizeRoomType(String roomType) {
+        String normalized = RoomTypeUtils.normalizeSupported(roomType);
+        if (normalized.isBlank() && roomType != null && !roomType.isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Loai phong chi duoc la THUONG hoac VIP");
+        }
+        return normalized;
+    }
+
+    private String requireRoomType(String roomType) {
+        String normalized = normalizeRoomType(roomType);
+        if (normalized.isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "Loai phong chi duoc la THUONG hoac VIP");
+        }
+        return normalized;
+    }
 }
-
-

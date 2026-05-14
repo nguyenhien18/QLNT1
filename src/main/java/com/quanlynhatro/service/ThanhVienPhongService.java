@@ -1,7 +1,11 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import com.quanlynhatro.entity.HopDong;
 import com.quanlynhatro.entity.KhachThue;
 import com.quanlynhatro.entity.ThanhVienPhong;
@@ -9,17 +13,23 @@ import com.quanlynhatro.exception.AppException;
 import com.quanlynhatro.repository.HopDongRepository;
 import com.quanlynhatro.repository.KhachThueRepository;
 import com.quanlynhatro.repository.ThanhVienPhongRepository;
-import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+import com.quanlynhatro.util.PageableUtils;
 
 @Service
-@RequiredArgsConstructor
 public class ThanhVienPhongService {
     private final ThanhVienPhongRepository thanhVienPhongRepository;
     private final HopDongRepository hopDongRepository;
     private final KhachThueRepository khachThueRepository;
+
+    public ThanhVienPhongService(
+            ThanhVienPhongRepository thanhVienPhongRepository,
+            HopDongRepository hopDongRepository,
+            KhachThueRepository khachThueRepository
+    ) {
+        this.thanhVienPhongRepository = thanhVienPhongRepository;
+        this.hopDongRepository = hopDongRepository;
+        this.khachThueRepository = khachThueRepository;
+    }
 
     public List<ThanhVienPhong> getAll() {
         return thanhVienPhongRepository.findAll();
@@ -92,7 +102,10 @@ public class ThanhVienPhongService {
         if (newRole == ThanhVienPhong.VaiTro.DAI_DIEN
                 && !ThanhVienPhong.VaiTro.DAI_DIEN.equals(thanhVienPhong.getVaiTro())
                 && targetHopDong != null
-                && thanhVienPhongRepository.existsByHopDong_HopDongIdAndVaiTro(targetHopDong.getHopDongId(), ThanhVienPhong.VaiTro.DAI_DIEN)) {
+                && thanhVienPhongRepository.existsByHopDong_HopDongIdAndVaiTro(
+                targetHopDong.getHopDongId(),
+                ThanhVienPhong.VaiTro.DAI_DIEN
+        )) {
             throw new AppException(HttpStatus.CONFLICT, "Hop dong nay da co dai dien");
         }
 
@@ -104,12 +117,12 @@ public class ThanhVienPhongService {
             throw new AppException(HttpStatus.BAD_REQUEST, "Dai dien phai gan voi mot khach thue");
         }
 
-        boolean leavoingRepresentativeRole = ThanhVienPhong.VaiTro.DAI_DIEN.equals(thanhVienPhong.getVaiTro())
+        boolean leavingRepresentativeRole = ThanhVienPhong.VaiTro.DAI_DIEN.equals(thanhVienPhong.getVaiTro())
                 && (newRole != ThanhVienPhong.VaiTro.DAI_DIEN
                 || targetHopDong == null
                 || oldHopDongId == null
                 || !oldHopDongId.equals(targetHopDong.getHopDongId()));
-        if (leavoingRepresentativeRole
+        if (leavingRepresentativeRole
                 && oldHopDong != null
                 && oldHopDongId != null
                 && oldHopDong.getTrangThai() == HopDong.TrangThai.CON_HIEU_LUC
@@ -121,8 +134,12 @@ public class ThanhVienPhongService {
         if (targetKhachThueId != null) {
             KhachThue khachThue = requireActiveTenant(targetKhachThueId);
             if (targetHopDong != null
-                    && thanhVienPhongRepository.existsByHopDong_HopDongIdAndKhachThue_KhachThueId(targetHopDong.getHopDongId(), targetKhachThueId)
-                    && (thanhVienPhong.getKhachThue() == null || !targetKhachThueId.equals(thanhVienPhong.getKhachThue().getKhachThueId()))) {
+                    && thanhVienPhongRepository.existsByHopDong_HopDongIdAndKhachThue_KhachThueId(
+                    targetHopDong.getHopDongId(),
+                    targetKhachThueId
+            )
+                    && (thanhVienPhong.getKhachThue() == null
+                    || !targetKhachThueId.equals(thanhVienPhong.getKhachThue().getKhachThueId()))) {
                 throw new AppException(HttpStatus.CONFLICT, "Khach thue nay da co trong hop dong");
             }
             if (targetHopDong != null
@@ -144,7 +161,10 @@ public class ThanhVienPhongService {
                 && targetHopDong != null
                 && (!ThanhVienPhong.VaiTro.DAI_DIEN.equals(thanhVienPhong.getVaiTro())
                 || (oldHopDongId != null && !targetHopDong.getHopDongId().equals(oldHopDongId)))
-                && thanhVienPhongRepository.existsByHopDong_HopDongIdAndVaiTro(targetHopDong.getHopDongId(), ThanhVienPhong.VaiTro.DAI_DIEN)) {
+                && thanhVienPhongRepository.existsByHopDong_HopDongIdAndVaiTro(
+                targetHopDong.getHopDongId(),
+                ThanhVienPhong.VaiTro.DAI_DIEN
+        )) {
             throw new AppException(HttpStatus.CONFLICT, "Hop dong nay da co dai dien");
         }
 
@@ -226,4 +246,3 @@ public class ThanhVienPhongService {
         }
     }
 }
-

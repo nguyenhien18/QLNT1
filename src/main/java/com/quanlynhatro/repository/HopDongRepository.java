@@ -1,16 +1,17 @@
 package com.quanlynhatro.repository;
 
-import org.springframework.stereotype.Repository;
-
-import com.quanlynhatro.entity.HopDong;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.quanlynhatro.entity.HopDong;
 
 @Repository
 public interface HopDongRepository extends JpaRepository<HopDong, Long>, JpaSpecificationExecutor<HopDong> {
@@ -19,6 +20,7 @@ public interface HopDongRepository extends JpaRepository<HopDong, Long>, JpaSpec
     boolean existsByPhongTro_PhongTroIdAndTrangThai(Long phongTroId, HopDong.TrangThai trangThai);
     boolean existsByKhachThue_KhachThueId(Long khachThueId);
     boolean existsByKhachThue_KhachThueIdAndTrangThai(Long khachThueId, HopDong.TrangThai trangThai);
+    boolean existsByKhachThue_KhachThueIdAndTrangThaiAndHopDongIdNot(Long khachThueId, HopDong.TrangThai trangThai, Long hopDongId);
     List<HopDong> findByKhachThue_KhachThueId(Long khachThueId);
     List<HopDong> findByTrangThai(HopDong.TrangThai trangThai);
     Optional<HopDong> findFirstByPhongTro_PhongTroIdAndTrangThaiOrderByNgayBatDauDesc(Long phongTroId, HopDong.TrangThai trangThai);
@@ -84,5 +86,3 @@ public interface HopDongRepository extends JpaRepository<HopDong, Long>, JpaSpec
                                                           @Param("trangThai") HopDong.TrangThai trangThai,
                                                           Pageable pageable);
 }
-
-

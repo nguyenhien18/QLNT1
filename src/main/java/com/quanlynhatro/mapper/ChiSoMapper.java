@@ -1,12 +1,13 @@
 package com.quanlynhatro.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.quanlynhatro.dto.response.ChiSoResponse;
 import com.quanlynhatro.entity.ChiSo;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ChiSoMapper {
-    public ChiSoResponse toResponse(ChiSo entity) {
+    public ChiSoResponse toChiSoResponse(ChiSo entity) {
         return new ChiSoResponse(
                 entity.getChiSoId(),
                 entity.getPhongTro() == null ? null : entity.getPhongTro().getPhongTroId(),

@@ -1,49 +1,48 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Hợp đồng</title>
+    <title>Hop dong cua toi</title>
     <link rel="stylesheet" href="css/tranghopdong.css">
 </head>
 <body>
 <div class="app">
-
     <aside class="sidebar">
-        <h2>QUẢN LÝ NHÀ TRỌ</h2>
-        <div class="user">Xin chào, <span id="helloUser"></span></div>
+        <h2>QUAN LY NHA TRO</h2>
+        <div class="user">Xin chao, <span id="helloUser"></span></div>
 
         <ul class="menu">
-            <li><a href="trangcanhan.html">Trang cá nhân</a></li>
-            <li class="active"><a href="tranghopdong.html">Hợp đồng</a></li>
-            <li><a href="tranghoadon.html">Hóa đơn</a></li>
-            <li><a href="trangchisodien.html">Chỉ số</a></li>
-            <li><a href="trangthanhtoan.html">Thanh toán</a></li>
+            <li><a href="trangcanhan.html">Trang ca nhan</a></li>
+            <li class="active"><a href="tranghopdong.html">Hop dong</a></li>
+            <li><a href="tranghoadon.html">Hoa don</a></li>
+            <li><a href="trangchisodien.html">Chi so</a></li>
+            <li><a href="trangthanhtoan.html">Thanh toan</a></li>
         </ul>
 
-        <div class="logout" id="logoutBtn">Đăng xuất</div>
+        <div class="logout" id="logoutBtn">Dang xuat</div>
     </aside>
 
     <main class="main">
-        <div class="page-header">
-            <div>
-                <h1>Hóa đơn</h1>
-                <div class="subtext">Hợp đồng của tôi</div>
+        <section class="contract-section contract-section-simple">
+            <div class="contract-section-head">
+                <h3>Danh sach hop dong</h3>
+                <p id="contractCountText">0 hop dong duoc tim thay</p>
             </div>
-        </div>
-        <div class="page-header">
-            <div>
-                <h1>Hợp đồng của tôi</h1>
-            </div>
-        </div>
 
-        <div class="contract-inner"></div>
+            <div id="emptyState" class="empty-state" style="display:none;">
+                Ban chua co hop dong nao.
+            </div>
+
+            <div class="contract-list" id="contractList"></div>
+        </section>
     </main>
 </div>
 
-<script src="../js/config.js"></script>
-<script src="../js/ui-helpers.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/tranghopdong.js"></script>
+<script src="../js/config.js?v=20260508port8087fix2"></script>
+<script src="../js/ui-helpers.js?v=20260428fix"></script>
+<script src="../js/core/auth-session.js?v=20260508sessionfix1"></script>
+<script src="js/auth.js?v=20260508authhotfix2"></script>
+<script src="js/tranghopdong.js?v=20260513simplecard1"></script>
 </body>
 </html>

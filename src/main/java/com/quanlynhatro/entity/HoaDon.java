@@ -1,25 +1,26 @@
 package com.quanlynhatro.entity;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-@Entity
-@Table(name = "hoa_don", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_hoa_don_hop_dong_ky", columnNames = {"hop_dong_id", "ky_hoa_don"})
-})
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(
+        name = "hoa_don",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_hoa_don_hop_dong_ky", columnNames = {"hop_dong_id", "ky_hoa_don"})
+        }
+)
 public class HoaDon {
 
     public enum TrangThai { CHUA_THANH_TOAN, DA_THANH_TOAN }
@@ -72,7 +73,3 @@ public class HoaDon {
     @Column(name = "trang_thai", nullable = false)
     private TrangThai trangThai = TrangThai.CHUA_THANH_TOAN;
 }
-
-
-
-

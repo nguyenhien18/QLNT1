@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
@@ -41,6 +41,12 @@
             </div>
 
             <div class="stat-card">
+                <div class="stat-label">Phòng VIP</div>
+                <div class="stat-value" id="vipRooms">0</div>
+                <div class="stat-sub" id="vipRoomsSub">0 đang thuê</div>
+            </div>
+
+            <div class="stat-card">
                 <div class="stat-label">Phòng trống</div>
                 <div class="stat-value text-green" id="emptyRooms">0</div>
                 <div class="stat-sub" id="emptyRoomsSub">0.0% tổng phòng</div>
@@ -74,8 +80,12 @@
 
 </div>
 
-<script src="../js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/trangchu.js"></script>
+<script src="../js/config.js?v=20260508port8087fix2"></script>
+<script src="../js/core/auth-session.js?v=20260508sessionfix1"></script>
+<script src="js/auth.js?v=20260508authhotfix2"></script>
+<script src="js/trangchu.js?v=20260507vip1"></script>
 </body>
 </html>
+
+
+

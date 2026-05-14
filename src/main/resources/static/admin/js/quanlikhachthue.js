@@ -1,5 +1,7 @@
-const { api } = window.AppUtils || {};
+(function () {
+const { api: apiClient } = window.AppUtils || {};
 const { textOrDash } = window.UiHelpers || {};
+const { bindInputs, bindPagination } = window.PageFilters || {};
 
 const $ = (id) => document.getElementById(id);
 const PAGE_SIZE = 4;
@@ -17,39 +19,19 @@ let currentPage = 1;
 let totalPages = 1;
 let totalItems = 0;
 let tenants = [];
-let contracts = [];
-let members = [];
 
 function openModal() {
-  const modal = $("tenantModal");
-  if (!modal) return;
-  modal.classList.add("show");
-  modal.setAttribute("aria-hidden", "false");
+  window.Modal?.open("tenantModal");
 }
 
 function closeModal() {
-  const modal = $("tenantModal");
-  if (!modal) return;
-  modal.classList.remove("show");
-  modal.setAttribute("aria-hidden", "true");
-}
-
-async function loadMeta() {
-  [contracts, members] = await Promise.all([
-    window.fetchAllPages(api, "/api/hop-dong", { sortBy: "ngayBatDau", direction: "desc" }).catch(() => []),
-    window.fetchAllPages(api, "/api/thanh-vien-phong", { sortBy: "thanhVienId", direction: "desc" }).catch(() => []),
-  ]);
-}
-
-function hasContractHistory(tenantId) {
-  return contracts.some((c) => c.khachThue?.khachThueId === tenantId)
-    || members.some((m) => m.khachThue?.khachThueId === tenantId);
+  window.Modal?.close("tenantModal");
 }
 
 async function loadList() {
   const keyword = ($("fTenantKeyword")?.value || "").trim();
   try {
-    const pageData = await window.fetchPage(api, "/api/khach-thue/search", {
+    const pageData = await window.fetchPage(apiClient, "/api/khach-thue/search", {
       page: currentPage - 1,
       size: PAGE_SIZE,
       params: { keyword },
@@ -174,13 +156,13 @@ async function saveTenant() {
 
   try {
     if (id) {
-      await api(`/api/khach-thue/${id}`, {
+      await apiClient(`/api/khach-thue/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
       });
     } else {
-      await api("/api/khach-thue", {
+      await apiClient("/api/khach-thue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -204,8 +186,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const saveBtn = $("tenantSave");
   const keywordInput = $("fTenantKeyword");
   const resetBtn = $("resetTenantFilter");
-  const prevBtn = $("prevPageBtn");
-  const nextBtn = $("nextPageBtn");
   const listEl = $("tenantList");
 
   addBtn?.addEventListener("click", () => {
@@ -217,10 +197,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   cancelBtn?.addEventListener("click", closeModal);
   backdrop?.addEventListener("click", closeModal);
   saveBtn?.addEventListener("click", saveTenant);
-  keywordInput?.addEventListener("input", () => { currentPage = 1; loadList(); });
+  bindInputs?.(["fTenantKeyword"], () => { currentPage = 1; loadList(); });
   resetBtn?.addEventListener("click", () => { if (keywordInput) keywordInput.value = ""; currentPage = 1; loadList(); });
-  prevBtn?.addEventListener("click", () => { if (currentPage > 1) { currentPage--; loadList(); } });
-  nextBtn?.addEventListener("click", () => { if (currentPage < totalPages) { currentPage++; loadList(); } });
+  bindPagination?.("prevPageBtn", "nextPageBtn", {
+    get page() { return currentPage; },
+    set page(v) { currentPage = v; },
+    get totalPages() { return totalPages; },
+  }, loadList);
 
   listEl?.addEventListener("click", async (e) => {
     const btn = e.target.closest("button[data-act]");
@@ -235,13 +218,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     if (btn.dataset.act === "del") {
-      if (hasContractHistory(id)) {
-        alert("Khach thue da co lich su hop dong, khong the xoa.");
-        return;
-      }
       if (!confirm(`Xoa khach thue ${tenant.hoTen}?`)) return;
       try {
-        await api(`/api/khach-thue/${id}`, { method: "DELETE" });
+        await apiClient(`/api/khach-thue/${id}`, { method: "DELETE" });
         await loadList();
       } catch (err) {
         alert("Xoa khach thue that bai: " + err.message);
@@ -249,6 +228,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  await loadMeta();
   await loadList();
 });
+
+})();

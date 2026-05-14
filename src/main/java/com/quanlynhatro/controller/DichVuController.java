@@ -1,14 +1,7 @@
 package com.quanlynhatro.controller;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.dto.request.CreateDichVuRequest;
-import com.quanlynhatro.dto.request.UpdateDichVuRequest;
-import com.quanlynhatro.dto.response.ApiResponse;
-import com.quanlynhatro.dto.response.DichVuResponse;
-import com.quanlynhatro.entity.DichVu;
-import com.quanlynhatro.mapper.DichVuMapper;
-import com.quanlynhatro.service.DichVuService;
 import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,30 +12,46 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.quanlynhatro.dto.request.CreateDichVuRequest;
+import com.quanlynhatro.dto.request.UpdateDichVuRequest;
+import com.quanlynhatro.dto.response.ApiResponse;
+import com.quanlynhatro.dto.response.DichVuResponse;
+import com.quanlynhatro.dto.response.PageResponse;
+import com.quanlynhatro.entity.DichVu;
+import com.quanlynhatro.mapper.DichVuMapper;
+import com.quanlynhatro.service.DichVuService;
+
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/dich-vu")
 @RequiredArgsConstructor
-public class DichVuController extends ApiControllerSupport {
+public class DichVuController {
 
     private final DichVuService dichVuService;
     private final DichVuMapper dichVuMapper;
 
     @GetMapping
-    public ApiResponse<?> getAll(@RequestParam(required = false) Integer page,
+    public ApiResponse<PageResponse<DichVuResponse>> getAll(@RequestParam(required = false) Integer page,
                                  @RequestParam(required = false) Integer size,
                                  @RequestParam(required = false) String sortBy,
                                  @RequestParam(required = false) String direction) {
-        return pagedMapped(
-                page, size, sortBy, direction,
-                dichVuService::getAll,
-                () -> dichVuService.getPage(page, size, sortBy, direction),
-                dichVuMapper::toResponse
-        );
+        return ApiResponse.<PageResponse<DichVuResponse>>builder()
+                .code(200)
+                .message("success")
+                .result(PageResponse.from(
+                        dichVuService.getPage(page, size, sortBy, direction).map(dichVuMapper::toDichVuResponse)
+                ))
+                .build();
     }
 
     @GetMapping("/{id}")
     public ApiResponse<DichVuResponse> getById(@PathVariable Long id) {
-        return success(dichVuMapper.toResponse(dichVuService.getById(id)));
+        return ApiResponse.<DichVuResponse>builder()
+                .code(200)
+                .message("success")
+                .result(dichVuMapper.toDichVuResponse(dichVuService.getById(id)))
+                .build();
     }
 
     @PostMapping
@@ -50,7 +59,12 @@ public class DichVuController extends ApiControllerSupport {
         DichVu dichVu = new DichVu();
         dichVu.setTenDichVu(request.getTenDichVu());
         dichVu.setGiaDichVu(request.getGiaDichVu());
-        return success(dichVuMapper.toResponse(dichVuService.create(dichVu)));
+        dichVu.setDonViTinh(request.getDonViTinh());
+        return ApiResponse.<DichVuResponse>builder()
+                .code(200)
+                .message("success")
+                .result(dichVuMapper.toDichVuResponse(dichVuService.create(dichVu)))
+                .build();
     }
 
     @PutMapping("/{id}")
@@ -58,12 +72,22 @@ public class DichVuController extends ApiControllerSupport {
         DichVu dichVu = new DichVu();
         dichVu.setTenDichVu(request.getTenDichVu());
         dichVu.setGiaDichVu(request.getGiaDichVu());
-        return success(dichVuMapper.toResponse(dichVuService.update(id, dichVu)));
+        dichVu.setDonViTinh(request.getDonViTinh());
+        return ApiResponse.<DichVuResponse>builder()
+                .code(200)
+                .message("success")
+                .result(dichVuMapper.toDichVuResponse(dichVuService.update(id, dichVu)))
+                .build();
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         dichVuService.delete(id);
-        return successMessage("Xoa dich vu thanh cong");
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Xoa dich vu thanh cong")
+                .build();
     }
+
 }
+

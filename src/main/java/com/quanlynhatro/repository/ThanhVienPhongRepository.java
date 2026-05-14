@@ -1,13 +1,14 @@
 package com.quanlynhatro.repository;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.quanlynhatro.entity.HopDong;
 import com.quanlynhatro.entity.ThanhVienPhong;
-import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 
 @Repository
 public interface ThanhVienPhongRepository extends JpaRepository<ThanhVienPhong, Long> {
@@ -19,8 +20,10 @@ public interface ThanhVienPhongRepository extends JpaRepository<ThanhVienPhong, 
     boolean existsByHopDong_HopDongIdAndKhachThue_KhachThueId(Long hopDongId, Long khachThueId);
     boolean existsByKhachThue_KhachThueId(Long khachThueId);
     boolean existsByKhachThue_KhachThueIdAndHopDong_TrangThai(Long khachThueId, HopDong.TrangThai trangThai);
-    boolean existsByKhachThue_KhachThueIdAndHopDong_TrangThaiAndHopDong_HopDongIdNot(Long khachThueId, HopDong.TrangThai trangThai, Long hopDongId);
+    boolean existsByKhachThue_KhachThueIdAndHopDong_TrangThaiAndHopDong_HopDongIdNot(
+            Long khachThueId,
+            HopDong.TrangThai trangThai,
+            Long hopDongId
+    );
     void deleteByHopDong_HopDongId(Long hopDongId);
 }
-
-

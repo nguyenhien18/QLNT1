@@ -1,13 +1,34 @@
 (function () {
   const isFileProtocol = window.location.protocol === "file:";
-  const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-  const defaultBase = isFileProtocol
-    ? "http://localhost:8086"
-    : (isLocalHost && window.location.port !== "8086"
-        ? `${window.location.protocol}//${window.location.hostname}:8086`
-        : window.location.origin);
+  const originBase = window.location.protocol.startsWith("http") ? window.location.origin : "";
 
-  window.API_BASE = window.API_BASE || defaultBase;
+  const defaultBase = isFileProtocol
+    ? "http://localhost:8087"
+    : (originBase || "http://localhost:8087");
+
+  window.API_BASE = defaultBase;
+  if (!isFileProtocol && originBase) {
+    window.localStorage.setItem("QLPT_API_BASE", originBase);
+  }
+
+  function redirectToLoginIfUnauthorized(status, path) {
+    if (status !== 401) return;
+
+    const pathname = window.location.pathname || "";
+    const isProtectedPage = pathname.includes("/admin/") || pathname.includes("/nguoithue/");
+    const isLoginPage = pathname.includes("/dangnhap/login.html");
+    if (!isProtectedPage || isLoginPage) return;
+
+    const normalizedPath = String(path || "").toLowerCase();
+    const isAuthCheck = normalizedPath.startsWith("/api/auth/me");
+    if (!isAuthCheck) return;
+
+    const hasCachedToken = Boolean(window.localStorage.getItem("QLPT_AUTH_TOKEN"));
+    const hasCachedRole = Boolean(window.localStorage.getItem("QLPT_AUTH_ROLE"));
+    if (hasCachedToken || hasCachedRole) return;
+
+    window.location.href = `${window.API_BASE}/dangnhap/login.html`;
+  }
 
   function normalizeLegacyShape(input) {
     if (Array.isArray(input)) {
@@ -64,6 +85,7 @@
 
       const response = await fetch(`${window.API_BASE}${path}`, {
         ...rest,
+        credentials: "include",
         headers: finalHeaders,
       });
 
@@ -73,7 +95,11 @@
         : await response.text();
 
       if (!response.ok) {
-        throw new Error(payload?.message || payload || `HTTP ${response.status}`);
+        redirectToLoginIfUnauthorized(response.status, path);
+        const error = new Error(payload?.message || payload || `HTTP ${response.status}`);
+        error.status = response.status;
+        error.payload = payload;
+        throw error;
       }
 
       if (payload && typeof payload === "object" && Object.prototype.hasOwnProperty.call(payload, "result")) {
@@ -92,50 +118,48 @@
       const date = new Date(value);
       return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString("vi-VN");
     },
-  };
-
-  const LABEL_MAPS = {
+  };  const LABEL_MAPS = {
     contractStatus: {
-      CON_HIEU_LUC: "Còn hiệu lực",
-      HET_HIEU_LUC: "Hết hiệu lực",
-      HUY: "Đã hủy",
+      CON_HIEU_LUC: "Con hieu luc",
+      HET_HIEU_LUC: "Het hieu luc",
+      HUY: "Da huy",
     },
     roomStatus: {
-      TRONG: "Trống",
-      DA_CHO_THUE: "Đã cho thuê",
+      TRONG: "Trong",
+      DA_CHO_THUE: "Da cho thue",
     },
     roomType: {
-      CO_GAC: "Có gác",
-      KHONG_GAC: "Không gác",
+      THUONG: "Thuong",
+      VIP: "VIP",
     },
     invoiceStatus: {
-      CHUA_THANH_TOAN: "Chưa thanh toán",
-      DA_THANH_TOAN: "Đã thanh toán",
-      PAID: "Đã thanh toán",
-      UNPAID: "Chưa thanh toán",
+      CHUA_THANH_TOAN: "Chua thanh toan",
+      DA_THANH_TOAN: "Da thanh toan",
+      PAID: "Da thanh toan",
+      UNPAID: "Chua thanh toan",
     },
     paymentStatus: {
-      THANH_CONG: "Thành công",
-      THAT_BAI: "Thất bại",
-      DA_THANH_TOAN: "Đã thanh toán",
-      CHUA_THANH_TOAN: "Chưa thanh toán",
-      PAID: "Đã thanh toán",
-      UNPAID: "Chưa thanh toán",
-      FAILED: "Thất bại",
+      THANH_CONG: "Thanh cong",
+      THAT_BAI: "That bai",
+      DA_THANH_TOAN: "Da thanh toan",
+      CHUA_THANH_TOAN: "Chua thanh toan",
+      PAID: "Da thanh toan",
+      UNPAID: "Chua thanh toan",
+      FAILED: "That bai",
     },
     meterType: {
-      DIEN: "Điện",
-      NUOC: "Nước",
+      DIEN: "Dien",
+      NUOC: "Nuoc",
     },
     memberRole: {
-      DAI_DIEN: "Đại diện",
-      O_CUNG: "Ở cùng",
+      DAI_DIEN: "Dai dien",
+      O_CUNG: "O cung",
     },
     paymentMethod: {
-      ADMIN_XAC_NHAN: "Xác nhận thủ công",
+      ADMIN_XAC_NHAN: "Xac nhan thu cong",
       MOMO: "MoMo",
-      CHUYEN_KHOAN: "Chuyển khoản",
-      TIEN_MAT: "Tiền mặt",
+      CHUYEN_KHOAN: "Chuyen khoan",
+      TIEN_MAT: "Tien mat",
     },
   };
 
@@ -182,37 +206,6 @@
       const today = new Date();
       return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
     },
-  };
-
-  window.fetchAllPages = async function fetchAllPages(apiFn, path, options = {}) {
-    const { pageSize = 100, sortBy, direction, params = {} } = options;
-    const [rawPath, rawQuery = ""] = path.split("?");
-    const baseParams = new URLSearchParams(rawQuery);
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== "") {
-        baseParams.set(key, String(value));
-      }
-    });
-    if (sortBy) baseParams.set("sortBy", sortBy);
-    if (direction) baseParams.set("direction", direction);
-
-    let page = 0;
-    let totalPages = 1;
-    const items = [];
-
-    do {
-      const query = new URLSearchParams(baseParams);
-      query.set("page", String(page));
-      query.set("size", String(pageSize));
-      const data = await apiFn(`${rawPath}?${query.toString()}`);
-      const content = Array.isArray(data) ? data : (data?.content || []);
-      items.push(...content);
-      if (Array.isArray(data)) break;
-      totalPages = Number(data?.totalPages ?? 1);
-      page += 1;
-    } while (page < totalPages);
-
-    return items;
   };
 
   window.fetchPage = async function fetchPage(apiFn, path, options = {}) {

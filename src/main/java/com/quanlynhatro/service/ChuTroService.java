@@ -1,25 +1,31 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
-import com.quanlynhatro.dto.request.ChuTroUpdateRequest;
-import com.quanlynhatro.entity.ChuTro;
-import com.quanlynhatro.exception.AppException;
-import com.quanlynhatro.repository.ChuTroRepository;
-import com.quanlynhatro.repository.PhongTroRepository;
 import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.quanlynhatro.dto.request.ChuTroUpdateRequest;
+import com.quanlynhatro.entity.ChuTro;
+import com.quanlynhatro.exception.AppException;
+import com.quanlynhatro.repository.ChuTroRepository;
+import com.quanlynhatro.repository.PhongTroRepository;
+import com.quanlynhatro.util.PageableUtils;
+
 @Service
-@RequiredArgsConstructor
 public class ChuTroService {
     private final ChuTroRepository chuTroRepository;
     private final PhongTroRepository phongTroRepository;
     private final PasswordEncoder passwordEncoder;
+
+    public ChuTroService(ChuTroRepository chuTroRepository, PhongTroRepository phongTroRepository, PasswordEncoder passwordEncoder) {
+        this.chuTroRepository = chuTroRepository;
+        this.phongTroRepository = phongTroRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public List<ChuTro> getAll() {
         return chuTroRepository.findAll(Sort.by(Sort.Direction.DESC, "chuTroId"));
@@ -116,5 +122,3 @@ public class ChuTroService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 }
-
-

@@ -1,45 +1,123 @@
-const { api, money: fmtMoney } = window.AppUtils || {};
+(function () {
+const { api: apiClient, money: fmtMoney } = window.AppUtils || {};
 const { escapeHtml, textOrDash } = window.UiHelpers || {};
-const { bindChanges, bindInputs } = window.PageFilters || {};
+const { bindChanges } = window.PageFilters || {};
 
 const $ = (id) => document.getElementById(id);
 const PAGE_SIZE = 5;
+const SERVICE_PAGE_SIZE = 1000;
+
 let currentPage = 1;
 let totalPages = 1;
 let totalItems = 0;
 let rooms = [];
 let services = [];
-let roomServices = [];
-let contracts = [];
-let members = [];
+let summaryByRoomId = new Map();
+let roomNameOptions = [];
 
 function openModal() { window.Modal?.open("roomModal"); }
 function closeModal() { window.Modal?.close("roomModal"); }
-function typeText(v) { return window.AppUtils?.labels?.roomType(v) || (v === "CO_GAC" ? "Có gác" : "Không gác"); }
-function statusText(v) { return window.AppUtils?.labels?.roomStatus(v) || (v === "DA_CHO_THUE" ? "Đã cho thuê" : "Phòng trống"); }
+function normalizeRoomType(v) {
+  const key = String(v || "").trim().toUpperCase();
+  if (key === "VIP") return "VIP";
+  return "THUONG";
+}
+function typeText(v) {
+  const normalized = normalizeRoomType(v);
+  const mapped = window.AppUtils?.labels?.roomType?.(normalized);
+  if (mapped) return mapped;
+  return normalized === "VIP" ? "VIP" : "Thuong";
+}
+function roomTypeClass(v) {
+  return normalizeRoomType(v) === "VIP" ? "room-type-vip" : "room-type-thuong";
+}
+function roomTypeBadge(v) {
+  const text = typeText(v);
+  const safe = escapeHtml ? escapeHtml(text) : text;
+  return `<span class="room-type-badge ${roomTypeClass(v)}">${safe}</span>`;
+}
+function statusText(v) { return window.AppUtils?.labels?.roomStatus(v) || (v === "DA_CHO_THUE" ? "Da cho thue" : "Phong trong"); }
 function statusClass(v) { return v === "DA_CHO_THUE" ? "status-rented" : "status-empty"; }
 
+function roomSummary(roomId) {
+  return summaryByRoomId.get(Number(roomId)) || null;
+}
+
+function isRoomOccupied(roomId) {
+  const summary = roomSummary(roomId);
+  if (!summary) return false;
+  if (summary.trangThai === "DA_CHO_THUE") return true;
+  return Number(summary.soNguoiDangO || 0) > 0;
+}
+
+function currentCount(roomId) {
+  return Number(roomSummary(roomId)?.soNguoiDangO || 0);
+}
+
+function representativeName(roomId) {
+  return roomSummary(roomId)?.daiDien || "Trong";
+}
+
+function buildRoomNameOptions(summaryItems) {
+  return [...new Set((summaryItems || [])
+    .map((item) => String(item?.tenPhong || "").trim())
+    .filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "vi", { numeric: true, sensitivity: "base" }));
+}
+
+function renderRoomNameFilter() {
+  const roomNameFilter = $("fRoomName");
+  if (!roomNameFilter) return;
+
+  const currentValue = roomNameFilter.value || "";
+  roomNameFilter.innerHTML = '<option value="">Tat ca</option>' + roomNameOptions
+    .map((name) => {
+      const safeName = escapeHtml ? escapeHtml(name) : name;
+      return `<option value="${safeName}">${safeName}</option>`;
+    })
+    .join("");
+
+  if (currentValue && roomNameOptions.includes(currentValue)) {
+    roomNameFilter.value = currentValue;
+  }
+}
+
 async function loadMeta() {
-  [services, roomServices, contracts, members] = await Promise.all([
-    window.fetchAllPages(api, "/api/dich-vu", { sortBy: "dichVuId", direction: "desc" }).catch(() => []),
-    api("/api/phong-dich-vu").catch(() => []),
-    window.fetchAllPages(api, "/api/hop-dong", { sortBy: "ngayBatDau", direction: "desc" }).catch(() => []),
-    window.fetchAllPages(api, "/api/thanh-vien-phong", { sortBy: "thanhVienId", direction: "desc" }).catch(() => []),
+  const [servicePage, roomSummaryList] = await Promise.all([
+    window.fetchPage(apiClient, "/api/dich-vu", {
+      page: 0,
+      size: SERVICE_PAGE_SIZE,
+      sortBy: "dichVuId",
+      direction: "desc",
+    }).catch(() => ({ content: [] })),
+    apiClient("/api/phong-tro/summary").catch(() => []),
   ]);
+
+  services = servicePage.content || [];
+  const summaryItems = roomSummaryList || [];
+  summaryByRoomId = new Map(summaryItems.map((item) => [Number(item.phongTroId), item]));
+  roomNameOptions = buildRoomNameOptions(summaryItems);
+  renderRoomNameFilter();
   renderServiceChecklist();
+}
+
+async function refreshRoomSummary() {
+  const summaryItems = await apiClient("/api/phong-tro/summary").catch(() => []);
+  summaryByRoomId = new Map((summaryItems || []).map((item) => [Number(item.phongTroId), item]));
+  roomNameOptions = buildRoomNameOptions(summaryItems);
+  renderRoomNameFilter();
 }
 
 async function loadList() {
   const name = $("fRoomName")?.value.trim() || "";
   const type = $("fRoomType")?.value || "";
   const status = $("fRoomStatus")?.value || "";
-  const keyword = "";
 
   try {
-    const pageData = await window.fetchPage(api, "/api/phong-tro/search", {
+    const pageData = await window.fetchPage(apiClient, "/api/phong-tro/search", {
       page: currentPage - 1,
       size: PAGE_SIZE,
-      params: { name, type, status, keyword },
+      params: { name, type, status },
     });
 
     rooms = pageData.content || [];
@@ -50,8 +128,15 @@ async function loadList() {
       currentPage = totalPages;
       return loadList();
     }
-  } catch (e) {
-    console.error("Load room search failed", e);
+  } catch (error) {
+    console.error("Load room search failed", error);
+    const paging = $("roomPagingInfo");
+    if (paging) {
+      const status = Number(error?.status || 0);
+      paging.textContent = status
+        ? `Khong tai duoc du lieu phong (HTTP ${status}). Vui long dang nhap lai.`
+        : "Khong tai duoc du lieu phong. Vui long thu lai.";
+    }
     rooms = [];
     totalItems = 0;
     totalPages = 1;
@@ -64,48 +149,28 @@ function renderServiceChecklist(selected = []) {
   const box = $("roomServiceList");
   if (!box) return;
 
-  box.innerHTML = services.map((s) => `
+  box.innerHTML = services.map((service) => `
     <label class="service-item">
-      <input type="checkbox" value="${s.dichVuId}" ${selected.includes(s.dichVuId) ? "checked" : ""}>
-      <span>${escapeHtml ? escapeHtml(s.tenDichVu || "") : (s.tenDichVu || "")} (${fmtMoney(s.giaDichVu)})</span>
+      <input type="checkbox" value="${service.dichVuId}" ${selected.includes(service.dichVuId) ? "checked" : ""}>
+      <span>${escapeHtml ? escapeHtml(service.tenDichVu || "") : (service.tenDichVu || "")} (${fmtMoney(service.giaDichVu)})</span>
     </label>
   `).join("");
 }
 
 function getSelectedServiceIds() {
   return [...document.querySelectorAll('#roomServiceList input[type="checkbox"]:checked')]
-      .map((x) => Number(x.value));
-}
-
-function activeContractForRoom(roomId) {
-  return contracts.find((c) => c.phongTro?.phongTroId === roomId && c.trangThai === "CON_HIEU_LUC");
-}
-
-function hasAnyContractForRoom(roomId) {
-  return contracts.some((c) => c.phongTro?.phongTroId === roomId);
-}
-
-function currentCount(roomId) {
-  const c = activeContractForRoom(roomId);
-  if (!c) return 0;
-  return members.filter((m) => m.hopDong?.hopDongId === c.hopDongId).length;
-}
-
-function representativeName(roomId) {
-  const c = activeContractForRoom(roomId);
-  if (!c) return "Trống";
-  const rep = members.find((m) => m.hopDong?.hopDongId === c.hopDongId && m.vaiTro === "DAI_DIEN");
-  return rep?.hoTen || c.khachThue?.hoTen || "Chưa có";
+    .map((input) => Number(input.value))
+    .filter((id) => Number.isFinite(id));
 }
 
 function render() {
   const start = totalItems ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
   const end = Math.min(currentPage * PAGE_SIZE, totalItems);
 
-  $("roomCountText").textContent = `${totalItems} phòng được tìm thấy`;
+  $("roomCountText").textContent = `${totalItems} phong duoc tim thay`;
   $("roomPagingInfo").textContent = totalItems
-      ? `Hiển thị ${start} - ${end} / ${totalItems} phòng`
-      : "Hiển thị 0 phòng";
+    ? `Hien thi ${start} - ${end} / ${totalItems} phong`
+    : "Hien thi 0 phong";
   $("pageInfo").textContent = `Trang ${currentPage} / ${totalPages}`;
   $("prevPageBtn").disabled = currentPage <= 1;
   $("nextPageBtn").disabled = currentPage >= totalPages;
@@ -114,23 +179,23 @@ function render() {
   if (!tbody) return;
 
   if (!totalItems) {
-    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7280;">Không có phòng nào phù hợp.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7280;">Khong co phong nao phu hop.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = rooms.map((r) => `
+  tbody.innerHTML = rooms.map((room) => `
     <tr>
-      <td class="room-name-cell">${textOrDash ? textOrDash(r.tenPhong) : (r.tenPhong || "")}</td>
-      <td>${escapeHtml ? escapeHtml(typeText(r.loaiPhong)) : typeText(r.loaiPhong)}</td>
-      <td class="room-price">${fmtMoney(r.giaThue)}</td>
-      <td><span class="status-badge ${statusClass(r.trangThai)}">${escapeHtml ? escapeHtml(statusText(r.trangThai)) : statusText(r.trangThai)}</span></td>
-      <td>${textOrDash ? textOrDash(representativeName(r.phongTroId)) : representativeName(r.phongTroId)}</td>
-      <td>${r.sucChua || 0}</td>
-      <td>${currentCount(r.phongTroId)}</td>
+      <td class="room-name-cell">${textOrDash ? textOrDash(room.tenPhong) : (room.tenPhong || "")}</td>
+      <td>${roomTypeBadge(room.loaiPhong)}</td>
+      <td class="room-price">${fmtMoney(room.giaThue)}</td>
+      <td><span class="status-badge ${statusClass(room.trangThai)}">${escapeHtml ? escapeHtml(statusText(room.trangThai)) : statusText(room.trangThai)}</span></td>
+      <td>${textOrDash ? textOrDash(representativeName(room.phongTroId)) : representativeName(room.phongTroId)}</td>
+      <td>${room.sucChua || 0}</td>
+      <td>${currentCount(room.phongTroId)}</td>
       <td>
         <div class="action-group">
-          <button class="btn-small btn-edit" onclick="window.editRoom(${r.phongTroId})">Sửa</button>
-          <button class="btn-small btn-delete" onclick="window.deleteRoom(${r.phongTroId})">Xóa</button>
+          <button class="btn-small btn-edit" type="button" data-action="edit" data-id="${room.phongTroId}">Sua</button>
+          <button class="btn-small btn-delete" type="button" data-action="delete" data-id="${room.phongTroId}">Xoa</button>
         </div>
       </td>
     </tr>
@@ -141,123 +206,133 @@ function clearForm() {
   $("roomForm").reset();
   $("roomId").value = "";
   $("roomCurrent").value = "0";
-  $("roomRepresentative").value = "Trống";
+  $("roomRepresentative").value = "Trong";
   $("roomStatus").value = "TRONG";
   renderServiceChecklist([]);
 }
 
-window.editRoom = async function editRoom(id) {
-  if (activeContractForRoom(id)) {
-    alert("Phòng đang có hợp đồng hiệu lực, không được sửa.");
+async function loadRoomServiceIds(roomId) {
+  try {
+    const pageData = await window.fetchPage(apiClient, `/api/phong-dich-vu/phong/${roomId}`, {
+      page: 0,
+      size: SERVICE_PAGE_SIZE,
+    });
+    return (pageData.content || [])
+      .map((item) => Number(item.dichVu?.dichVuId || item.dichVuId))
+      .filter((id) => Number.isFinite(id));
+  } catch (_) {
+    return [];
+  }
+}
+
+async function editRoom(id) {
+  if (isRoomOccupied(id)) {
+    alert("Phong dang co hop dong hieu luc, khong duoc sua.");
     return;
   }
 
-  let r = rooms.find((x) => x.phongTroId === id);
-  if (!r) {
+  let room = rooms.find((item) => item.phongTroId === id);
+  if (!room) {
     try {
-      r = await api(`/api/phong-tro/${id}`);
+      room = await apiClient(`/api/phong-tro/${id}`);
     } catch (_) {
       return;
     }
   }
+  if (!room) return;
 
-  if (!r) return;
+  $("roomId").value = room.phongTroId;
+  $("roomName").value = room.tenPhong || "";
+  $("roomType").value = normalizeRoomType(room.loaiPhong);
+  $("roomPrice").value = room.giaThue || 0;
+  $("roomStatus").value = room.trangThai || "TRONG";
+  $("roomRepresentative").value = representativeName(room.phongTroId);
+  $("roomCapacity").value = room.sucChua || 1;
+  $("roomCurrent").value = currentCount(room.phongTroId);
+  $("roomDesc").value = room.moTa || "";
 
-  $("roomId").value = r.phongTroId;
-  $("roomName").value = r.tenPhong || "";
-  $("roomType").value = r.loaiPhong || "KHONG_GAC";
-  $("roomPrice").value = r.giaThue || 0;
-  $("roomStatus").value = r.trangThai || "TRONG";
-  $("roomRepresentative").value = representativeName(r.phongTroId);
-  $("roomCapacity").value = r.sucChua || 1;
-  $("roomCurrent").value = currentCount(r.phongTroId);
-  $("roomDesc").value = r.moTa || "";
-
-  const selected = roomServices
-      .filter((rs) => (rs.phongTro?.phongTroId || rs.phongTroId) === r.phongTroId)
-      .map((rs) => Number(rs.dichVu?.dichVuId || rs.dichVuId));
-
-  renderServiceChecklist(selected);
-  $("roomTitle").textContent = "Cập nhật phòng";
+  const selectedServiceIds = await loadRoomServiceIds(room.phongTroId);
+  renderServiceChecklist(selectedServiceIds);
+  $("roomTitle").textContent = "Cap nhat phong";
   openModal();
-};
+}
 
-window.deleteRoom = async function deleteRoom(id) {
-  if (hasAnyContractForRoom(id)) {
-    alert("Không thể xóa phòng đã từng có hợp đồng.");
-    return;
-  }
-
-  if (!confirm("Xóa phòng này?")) return;
-
+async function deleteRoom(id) {
+  if (!confirm("Xoa phong nay?")) return;
   try {
-    await api(`/api/phong-tro/${id}`, { method: "DELETE" });
+    await apiClient(`/api/phong-tro/${id}`, { method: "DELETE" });
+    await refreshRoomSummary();
     await loadList();
-  } catch (e) {
-    alert("Xóa phòng thất bại: " + e.message);
+  } catch (error) {
+    alert("Xoa phong that bai: " + error.message);
   }
-};
+}
 
 async function syncRoomServices(roomId) {
   const selected = getSelectedServiceIds();
-  const current = roomServices
-      .filter((rs) => (rs.phongTro?.phongTroId || rs.phongTroId) === roomId)
-      .map((rs) => Number(rs.dichVu?.dichVuId || rs.dichVuId));
+  const current = await loadRoomServiceIds(roomId);
 
   const toAdd = selected.filter((id) => !current.includes(id));
-  const toDel = current.filter((id) => !selected.includes(id));
+  const toDelete = current.filter((id) => !selected.includes(id));
 
-  for (const id of toAdd) {
+  for (const serviceId of toAdd) {
     try {
-      await api("/api/phong-dich-vu", {
+      await apiClient("/api/phong-dich-vu", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phongTroId: roomId, dichVuId: id }),
+        body: JSON.stringify({ phongTroId: roomId, dichVuId: serviceId }),
       });
-    } catch (_) {}
+    } catch (_) {
+      // Ignore duplicate/partial failures, backend validation is source of truth.
+    }
   }
 
-  for (const id of toDel) {
+  for (const serviceId of toDelete) {
     try {
-      await api(`/api/phong-dich-vu?phongTroId=${roomId}&dichVuId=${id}`, { method: "DELETE" });
-    } catch (_) {}
+      await apiClient(`/api/phong-dich-vu?phongTroId=${roomId}&dichVuId=${serviceId}`, { method: "DELETE" });
+    } catch (_) {
+      // Ignore partial failures, list refresh will reflect actual state from backend.
+    }
   }
 }
 
 async function saveRoom() {
   const id = $("roomId").value.trim();
 
-  if (id && activeContractForRoom(Number(id))) {
-    alert("Phòng đang có hợp đồng hiệu lực, không được sửa.");
+  if (id && isRoomOccupied(Number(id))) {
+    alert("Phong dang co hop dong hieu luc, khong duoc sua.");
     return;
   }
 
-  const currentUser = JSON.parse(localStorage.getItem("currentUser") || "null");
+  const ensuredUser = window.AuthSession?.ensure
+    ? await window.AuthSession.ensure().catch(() => null)
+    : null;
+  const currentUser = window.AuthSession?.getCurrentUser?.() || ensuredUser;
   const body = {
-    chuTro: { chuTroId: currentUser?.id },
+    chuTroId: currentUser?.id,
     tenPhong: $("roomName").value.trim(),
-    loaiPhong: $("roomType").value,
+    loaiPhong: normalizeRoomType($("roomType").value),
     giaThue: Number($("roomPrice").value || 0),
     trangThai: $("roomStatus").value,
     sucChua: Number($("roomCapacity").value || 0),
     moTa: $("roomDesc").value.trim(),
   };
 
-  if (!body.tenPhong || !body.chuTro?.chuTroId) {
-    alert("Thiếu tên phòng hoặc thông tin chủ trọ đăng nhập.");
+  if (!body.tenPhong || !body.chuTroId) {
+    alert("Thieu ten phong hoac thong tin chu tro dang nhap.");
     return;
   }
 
   try {
     let saved;
     if (id) {
-      saved = await api(`/api/phong-tro/${id}`, {
+      saved = await apiClient(`/api/phong-tro/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
     } else {
-      saved = await api("/api/phong-tro", {
+      saved = await apiClient("/api/phong-tro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -267,17 +342,35 @@ async function saveRoom() {
     await syncRoomServices(saved.phongTroId || Number(id));
     closeModal();
     clearForm();
-    await loadMeta();
+    await refreshRoomSummary();
     await loadList();
-  } catch (e) {
-    alert("Lưu phòng thất bại: " + e.message);
+  } catch (error) {
+    alert("Luu phong that bai: " + error.message);
   }
+}
+
+function bindTableActions() {
+  $("roomTableBody")?.addEventListener("click", async (event) => {
+    const button = event.target.closest("button[data-action][data-id]");
+    if (!button) return;
+
+    const roomId = Number(button.dataset.id);
+    if (!Number.isFinite(roomId) || roomId <= 0) return;
+
+    if (button.dataset.action === "edit") {
+      await editRoom(roomId);
+      return;
+    }
+    if (button.dataset.action === "delete") {
+      await deleteRoom(roomId);
+    }
+  });
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
   $("addRoomBtn").addEventListener("click", () => {
     clearForm();
-    $("roomTitle").textContent = "Thêm phòng";
+    $("roomTitle").textContent = "Them phong";
     openModal();
   });
 
@@ -285,13 +378,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("roomCancel").addEventListener("click", closeModal);
   $("roomBackdrop").addEventListener("click", closeModal);
   $("roomSave").addEventListener("click", saveRoom);
+  bindTableActions();
 
-  bindChanges?.(["fRoomType", "fRoomStatus"], () => {
-    currentPage = 1;
-    loadList();
-  });
-
-  bindInputs?.(["fRoomName"], () => {
+  bindChanges?.(["fRoomName", "fRoomType", "fRoomStatus"], () => {
     currentPage = 1;
     loadList();
   });
@@ -305,16 +394,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   window.PageFilters?.bindPagination(
-      "prevPageBtn",
-      "nextPageBtn",
-      {
-        get page() { return currentPage; },
-        set page(v) { currentPage = v; },
-        get totalPages() { return totalPages; },
-      },
-      loadList
+    "prevPageBtn",
+    "nextPageBtn",
+    {
+      get page() { return currentPage; },
+      set page(v) { currentPage = v; },
+      get totalPages() { return totalPages; },
+    },
+    loadList,
   );
 
   await loadMeta();
   await loadList();
 });
+
+})();

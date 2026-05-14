@@ -1,16 +1,16 @@
 package com.quanlynhatro.dto.request;
 
-import com.quanlynhatro.entity.HopDong;
-import jakarta.validation.constraints.DecimalMin;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-@Getter
-@Setter
+import jakarta.validation.constraints.DecimalMin;
+
+import com.quanlynhatro.entity.HopDong;
+
+@Data
 public class UpdateHopDongRequest {
     private Long phongTroId;
     private Long daiDienKhachThueId;

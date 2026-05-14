@@ -1,7 +1,18 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import com.quanlynhatro.entity.ChiSo;
 import com.quanlynhatro.entity.HopDong;
 import com.quanlynhatro.entity.PhongTro;
@@ -9,24 +20,19 @@ import com.quanlynhatro.exception.AppException;
 import com.quanlynhatro.repository.ChiSoRepository;
 import com.quanlynhatro.repository.HoaDonRepository;
 import com.quanlynhatro.repository.HopDongRepository;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+import com.quanlynhatro.util.PageableUtils;
 
 @Service
-@RequiredArgsConstructor
 public class ChiSoService {
     private final ChiSoRepository chiSoRepository;
     private final HopDongRepository hopDongRepository;
     private final HoaDonRepository hoaDonRepository;
+
+    public ChiSoService(ChiSoRepository chiSoRepository, HopDongRepository hopDongRepository, HoaDonRepository hoaDonRepository) {
+        this.chiSoRepository = chiSoRepository;
+        this.hopDongRepository = hopDongRepository;
+        this.hoaDonRepository = hoaDonRepository;
+    }
 
     public List<ChiSo> getAll() {
         return chiSoRepository.findAll();
@@ -261,4 +267,3 @@ public class ChiSoService {
         return parseLoai(normalized);
     }
 }
-

@@ -1,17 +1,14 @@
 package com.quanlynhatro.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-@Entity
-@Table(name = "thanh_vien_phong")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "thanh_vien_phong")
 public class ThanhVienPhong {
 
     public enum VaiTro {
@@ -45,6 +42,3 @@ public class ThanhVienPhong {
     @Column(name = "vai_tro", nullable = false)
     private VaiTro vaiTro = VaiTro.O_CUNG;
 }
-
-
-

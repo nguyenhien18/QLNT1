@@ -1,12 +1,13 @@
 package com.quanlynhatro.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.quanlynhatro.dto.response.PhongDichVuResponse;
 import com.quanlynhatro.entity.PhongDichVu;
-import org.springframework.stereotype.Component;
 
 @Component
 public class PhongDichVuMapper {
-    public PhongDichVuResponse toResponse(PhongDichVu entity) {
+    public PhongDichVuResponse toPhongDichVuResponse(PhongDichVu entity) {
         return new PhongDichVuResponse(
                 entity.getPhongTro() == null ? null : entity.getPhongTro().getPhongTroId(),
                 entity.getDichVu() == null ? null : entity.getDichVu().getDichVuId(),

@@ -1,13 +1,5 @@
 @import url("style.css");
 
-* {
-  box-sizing: border-box;
-}
-
-.main {
-  max-width: none;
-}
-
 .dashboard-head {
   margin-bottom: 22px;
 }

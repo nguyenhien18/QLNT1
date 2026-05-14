@@ -1,12 +1,13 @@
 package com.quanlynhatro.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.quanlynhatro.dto.response.ChuTroResponse;
 import com.quanlynhatro.entity.ChuTro;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ChuTroMapper {
-    public ChuTroResponse toResponse(ChuTro entity) {
+    public ChuTroResponse toChuTroResponse(ChuTro entity) {
         return new ChuTroResponse(entity.getChuTroId(), entity.getHoTen(), entity.getEmail(), entity.getSdt());
     }
 }

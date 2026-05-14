@@ -1,7 +1,11 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import com.quanlynhatro.dto.request.PhongDichVuRequest;
 import com.quanlynhatro.entity.DichVu;
 import com.quanlynhatro.entity.PhongDichVu;
@@ -11,17 +15,23 @@ import com.quanlynhatro.exception.AppException;
 import com.quanlynhatro.repository.DichVuRepository;
 import com.quanlynhatro.repository.PhongDichVuRepository;
 import com.quanlynhatro.repository.PhongTroRepository;
-import java.util.List;
-import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
+import com.quanlynhatro.util.PageableUtils;
 
 @Service
-@RequiredArgsConstructor
 public class PhongDichVuService {
     private final PhongDichVuRepository phongDichVuRepository;
     private final PhongTroRepository phongTroRepository;
     private final DichVuRepository dichVuRepository;
+
+    public PhongDichVuService(
+            PhongDichVuRepository phongDichVuRepository,
+            PhongTroRepository phongTroRepository,
+            DichVuRepository dichVuRepository
+    ) {
+        this.phongDichVuRepository = phongDichVuRepository;
+        this.phongTroRepository = phongTroRepository;
+        this.dichVuRepository = dichVuRepository;
+    }
 
     public List<PhongDichVu> getAll() {
         return phongDichVuRepository.findAll();
@@ -36,7 +46,10 @@ public class PhongDichVuService {
     }
 
     public Page<PhongDichVu> getPageByPhongTroId(Long phongTroId, Integer page, Integer size, String sortBy, String direction) {
-        return phongDichVuRepository.findByPhongTro_PhongTroId(phongTroId, PageableUtils.build(page, size, sortBy, direction, "id.dichVuId"));
+        return phongDichVuRepository.findByPhongTro_PhongTroId(
+                phongTroId,
+                PageableUtils.build(page, size, sortBy, direction, "id.dichVuId")
+        );
     }
 
     public List<PhongDichVu> getByDichVuId(Long dichVuId) {
@@ -44,7 +57,10 @@ public class PhongDichVuService {
     }
 
     public Page<PhongDichVu> getPageByDichVuId(Long dichVuId, Integer page, Integer size, String sortBy, String direction) {
-        return phongDichVuRepository.findByDichVu_DichVuId(dichVuId, PageableUtils.build(page, size, sortBy, direction, "id.phongTroId"));
+        return phongDichVuRepository.findByDichVu_DichVuId(
+                dichVuId,
+                PageableUtils.build(page, size, sortBy, direction, "id.phongTroId")
+        );
     }
 
     public PhongDichVu create(PhongDichVuRequest request) {
@@ -81,5 +97,3 @@ public class PhongDichVuService {
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Khong tim thay dich vu"));
     }
 }
-
-

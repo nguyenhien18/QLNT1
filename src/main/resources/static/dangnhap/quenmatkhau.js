@@ -1,4 +1,4 @@
-﻿const form = document.getElementById("forgotForm");
+const form = document.getElementById("forgotForm");
 const msg = document.getElementById("msg");
 
 function showMsg(text, ok) {
@@ -18,4 +18,3 @@ form?.addEventListener("submit", (e) => {
   showMsg(`Đã ghi nhận yêu cầu khôi phục cho: ${email}.`, true);
   setTimeout(() => { window.location.href = "login.html"; }, 1800);
 });
-

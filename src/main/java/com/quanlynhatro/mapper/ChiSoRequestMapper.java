@@ -1,15 +1,19 @@
 package com.quanlynhatro.mapper;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import org.springframework.stereotype.Component;
+
 import com.quanlynhatro.dto.request.CreateChiSoRequest;
 import com.quanlynhatro.dto.request.UpdateChiSoRequest;
 import com.quanlynhatro.entity.ChiSo;
 import com.quanlynhatro.entity.HopDong;
 import com.quanlynhatro.entity.PhongTro;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ChiSoRequestMapper {
-    public ChiSo fromCreateRequest(CreateChiSoRequest request) {
+    public ChiSo toEntity(CreateChiSoRequest request) {
         return toEntity(
                 request.getPhongTroId(),
                 request.getHopDongId(),
@@ -24,7 +28,7 @@ public class ChiSoRequestMapper {
         );
     }
 
-    public ChiSo fromUpdateRequest(UpdateChiSoRequest request) {
+    public ChiSo toEntity(UpdateChiSoRequest request) {
         return toEntity(
                 request.getPhongTroId(),
                 request.getHopDongId(),
@@ -43,12 +47,12 @@ public class ChiSoRequestMapper {
                            Long hopDongId,
                            ChiSo.Loai loai,
                            String ky,
-                           java.time.LocalDate thoiDiem,
+                           LocalDate thoiDiem,
                            Integer chiSoCu,
                            Integer chiSoMoi,
                            Integer luongTieuThu,
-                           java.math.BigDecimal donGia,
-                           java.math.BigDecimal thanhTien) {
+                           BigDecimal donGia,
+                           BigDecimal thanhTien) {
         ChiSo entity = new ChiSo();
         entity.setPhongTro(toPhongTro(phongTroId));
         entity.setHopDong(toHopDong(hopDongId));
@@ -81,4 +85,3 @@ public class ChiSoRequestMapper {
         return hopDong;
     }
 }
-

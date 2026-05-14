@@ -1,13 +1,11 @@
 package com.quanlynhatro.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 public class InvoicePreviewResponse {
     private Long phongTroId;
@@ -21,3 +19,4 @@ public class InvoicePreviewResponse {
     private BigDecimal tienDichVu;
     private BigDecimal tongTien;
 }
+

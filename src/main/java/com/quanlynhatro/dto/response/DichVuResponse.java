@@ -1,16 +1,16 @@
 package com.quanlynhatro.dto.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 public class DichVuResponse {
     private Long dichVuId;
     private String tenDichVu;
     private BigDecimal giaDichVu;
+    private String donViTinh;
 }
+

@@ -1,12 +1,13 @@
 package com.quanlynhatro.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.quanlynhatro.dto.response.ThanhVienPhongResponse;
 import com.quanlynhatro.entity.ThanhVienPhong;
-import org.springframework.stereotype.Component;
 
 @Component
 public class ThanhVienPhongMapper {
-    public ThanhVienPhongResponse toResponse(ThanhVienPhong entity) {
+    public ThanhVienPhongResponse toThanhVienPhongResponse(ThanhVienPhong entity) {
         return new ThanhVienPhongResponse(
                 entity.getThanhVienId(),
                 entity.getHopDong() == null ? null : entity.getHopDong().getHopDongId(),

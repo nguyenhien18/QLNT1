@@ -1,7 +1,23 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+import jakarta.persistence.criteria.Predicate;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.quanlynhatro.dto.request.CreateHopDongRequest;
 import com.quanlynhatro.dto.request.UpdateHopDongRequest;
 import com.quanlynhatro.entity.HopDong;
@@ -15,21 +31,9 @@ import com.quanlynhatro.repository.KhachThueRepository;
 import com.quanlynhatro.repository.PhongTroRepository;
 import com.quanlynhatro.repository.ThanhToanRepository;
 import com.quanlynhatro.repository.ThanhVienPhongRepository;
-import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.quanlynhatro.util.PageableUtils;
 
 @Service
-@RequiredArgsConstructor
 public class HopDongService {
     private final HopDongRepository hopDongRepository;
     private final PhongTroRepository phongTroRepository;
@@ -37,6 +41,22 @@ public class HopDongService {
     private final ThanhVienPhongRepository thanhVienPhongRepository;
     private final HoaDonRepository hoaDonRepository;
     private final ThanhToanRepository thanhToanRepository;
+
+    public HopDongService(
+            HopDongRepository hopDongRepository,
+            PhongTroRepository phongTroRepository,
+            KhachThueRepository khachThueRepository,
+            ThanhVienPhongRepository thanhVienPhongRepository,
+            HoaDonRepository hoaDonRepository,
+            ThanhToanRepository thanhToanRepository
+    ) {
+        this.hopDongRepository = hopDongRepository;
+        this.phongTroRepository = phongTroRepository;
+        this.khachThueRepository = khachThueRepository;
+        this.thanhVienPhongRepository = thanhVienPhongRepository;
+        this.hoaDonRepository = hoaDonRepository;
+        this.thanhToanRepository = thanhToanRepository;
+    }
 
     public List<HopDong> getAll() {
         return hopDongRepository.findAll();
@@ -83,6 +103,16 @@ public class HopDongService {
                 .toList();
     }
 
+    public HopDong getCurrentTenantContract(Long khachThueId) {
+        return hopDongRepository.findAccessibleByKhachThueIdAndTrangThai(khachThueId, HopDong.TrangThai.CON_HIEU_LUC).stream()
+                .sorted(Comparator.comparing(HopDong::getNgayBatDau, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                .findFirst()
+                .orElseGet(() -> hopDongRepository.findAccessibleByKhachThueId(khachThueId).stream()
+                        .sorted(Comparator.comparing(HopDong::getNgayBatDau, Comparator.nullsLast(Comparator.naturalOrder())).reversed())
+                        .findFirst()
+                        .orElse(null));
+    }
+
     public List<HopDong> getByTrangThai(String trangThai) {
         return hopDongRepository.findByTrangThai(parseStatus(trangThai));
     }
@@ -97,7 +127,7 @@ public class HopDongService {
         String qStatus = status == null ? "" : status.trim();
 
         Specification<HopDong> spec = (root, query, cb) -> {
-            List<jakarta.persistence.criteria.Predicate> predicates = new java.util.ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>();
             if (!qRoom.isBlank()) {
                 predicates.add(cb.like(
                         cb.lower(cb.coalesce(root.join("phongTro").<String>get("tenPhong"), "")),
@@ -107,7 +137,7 @@ public class HopDongService {
             if (!qStatus.isBlank()) {
                 predicates.add(cb.equal(root.get("trangThai"), parseStatus(qStatus)));
             }
-            return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
 
         return hopDongRepository.findAll(spec, PageableUtils.build(page, size, "ngayBatDau", "desc", "ngayBatDau"));
@@ -118,6 +148,15 @@ public class HopDongService {
                 .filter(room -> room.getPhongTroId() != null)
                 .filter(room -> !hopDongRepository.existsByPhongTro_PhongTroIdAndTrangThai(
                         room.getPhongTroId(), HopDong.TrangThai.CON_HIEU_LUC))
+                .toList();
+    }
+
+    public List<KhachThue> getAvailableTenants(Long currentHopDongId) {
+        return khachThueRepository.findAll().stream()
+                .filter(tenant -> tenant.getKhachThueId() != null)
+                .filter(tenant -> tenant.getTrangThai() == KhachThue.TrangThai.HOAT_DONG)
+                .filter(tenant -> isTenantAvailableForContract(tenant.getKhachThueId(), currentHopDongId))
+                .sorted(Comparator.comparing(KhachThue::getKhachThueId, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
@@ -363,8 +402,15 @@ public class HopDongService {
         for (Long khachThueId : allIds) {
             KhachThue kt = requireActiveTenant(khachThueId, "Khong tim thay khach thue");
             boolean occupied = currentHopDongId == null
-                    ? thanhVienPhongRepository.existsByKhachThue_KhachThueIdAndHopDong_TrangThai(khachThueId, HopDong.TrangThai.CON_HIEU_LUC)
-                    : thanhVienPhongRepository.existsByKhachThue_KhachThueIdAndHopDong_TrangThaiAndHopDong_HopDongIdNot(khachThueId, HopDong.TrangThai.CON_HIEU_LUC, currentHopDongId);
+                    ? thanhVienPhongRepository.existsByKhachThue_KhachThueIdAndHopDong_TrangThai(
+                    khachThueId,
+                    HopDong.TrangThai.CON_HIEU_LUC
+            )
+                    : thanhVienPhongRepository.existsByKhachThue_KhachThueIdAndHopDong_TrangThaiAndHopDong_HopDongIdNot(
+                    khachThueId,
+                    HopDong.TrangThai.CON_HIEU_LUC,
+                    currentHopDongId
+            );
             if (occupied) {
                 throw new AppException(HttpStatus.CONFLICT, "Khach thue '" + kt.getHoTen() + "' da thuoc phong/hop dong khac");
             }
@@ -404,6 +450,24 @@ public class HopDongService {
         }
         return khachThue;
     }
+
+    private boolean isTenantAvailableForContract(Long khachThueId, Long currentHopDongId) {
+        if (currentHopDongId == null) {
+            boolean representativeInActive = hopDongRepository.existsByKhachThue_KhachThueIdAndTrangThai(
+                    khachThueId, HopDong.TrangThai.CON_HIEU_LUC
+            );
+            boolean memberInActive = thanhVienPhongRepository.existsByKhachThue_KhachThueIdAndHopDong_TrangThai(
+                    khachThueId, HopDong.TrangThai.CON_HIEU_LUC
+            );
+            return !representativeInActive && !memberInActive;
+        }
+
+        boolean representativeInOtherActive = hopDongRepository.existsByKhachThue_KhachThueIdAndTrangThaiAndHopDongIdNot(
+                khachThueId, HopDong.TrangThai.CON_HIEU_LUC, currentHopDongId
+        );
+        boolean memberInOtherActive = thanhVienPhongRepository.existsByKhachThue_KhachThueIdAndHopDong_TrangThaiAndHopDong_HopDongIdNot(
+                khachThueId, HopDong.TrangThai.CON_HIEU_LUC, currentHopDongId
+        );
+        return !representativeInOtherActive && !memberInOtherActive;
+    }
 }
-
-

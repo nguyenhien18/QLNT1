@@ -1,27 +1,27 @@
 package com.quanlynhatro.entity;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-@Entity
-@Table(name = "chi_so",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_chi_so_hop_dong_ky_loai", columnNames = {"hop_dong_id", "ky", "loai"})
-        })
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(
+        name = "chi_so",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_chi_so_hop_dong_ky_loai", columnNames = {"hop_dong_id", "ky", "loai"})
+        }
+)
 public class ChiSo {
 
     public enum Loai { DIEN, NUOC }
@@ -72,7 +72,3 @@ public class ChiSo {
     @Column(name = "thanh_tien", precision = 12, scale = 2)
     private BigDecimal thanhTien;
 }
-
-
-
-

@@ -1,16 +1,17 @@
 package com.quanlynhatro.repository;
 
-import org.springframework.stereotype.Repository;
-
-import com.quanlynhatro.entity.ChiSo;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.quanlynhatro.entity.ChiSo;
 
 @Repository
 public interface ChiSoRepository extends JpaRepository<ChiSo, Long>, JpaSpecificationExecutor<ChiSo> {
@@ -65,5 +66,3 @@ public interface ChiSoRepository extends JpaRepository<ChiSo, Long>, JpaSpecific
                                 @Param("period") String period,
                                 Pageable pageable);
 }
-
-

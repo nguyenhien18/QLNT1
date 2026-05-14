@@ -1,7 +1,8 @@
-﻿const PAGE_SIZE = 4;
+(function () {
+const PAGE_SIZE = 4;
 const { buildOptions, textOrDash } = window.UiHelpers || {};
 const { bindChanges, bindInputs } = window.PageFilters || {};
-const { api, money: fmtMoney, date: fmtDate, todayISO, currentPeriod } = window.AppUtils || {};
+const { api: apiClient, money: fmtMoney, date: fmtDate, todayISO, currentPeriod } = window.AppUtils || {};
 const $ = (id) => document.getElementById(id);
 
 let currentPage = 1;
@@ -9,14 +10,8 @@ let totalPages = 1;
 let totalItems = 0;
 let bills = [];
 let activeContracts = [];
-let payments = [];
-let paidInvoiceIds = new Set();
 let roomNames = [];
 let preview = null;
-
-function mapStatus(status) {
-  return status === "PAID" ? "DA_THANH_TOAN" : "CHUA_THANH_TOAN";
-}
 
 function openModal(element) {
   window.Modal?.open(element);
@@ -111,7 +106,7 @@ async function refreshPreview() {
   }
 
   try {
-    preview = await api(`/api/hoa-don/preview?phongTroId=${roomId}&kyHoaDon=${encodeURIComponent(period)}`);
+    preview = await apiClient(`/api/hoa-don/preview?phongTroId=${roomId}&kyHoaDon=${encodeURIComponent(period)}`);
     fillPreview();
   } catch (error) {
     resetPreview();
@@ -130,15 +125,18 @@ function openCreateModal() {
 }
 
 async function applyInvoiceFocus() {
-  const rawInvoiceId = localStorage.getItem("admin_invoice_focus");
+  const params = new URLSearchParams(window.location.search);
+  const rawInvoiceId = params.get("invoiceId");
   if (!rawInvoiceId) return;
 
   const focusId = Number(rawInvoiceId);
-  localStorage.removeItem("admin_invoice_focus");
+  
   if (!focusId) return;
 
+  window.history.replaceState({}, document.title, "hoadon.html");
+
   try {
-    const bill = await api(`/api/hoa-don/${focusId}`);
+    const bill = await apiClient(`/api/hoa-don/${focusId}`);
     openDetail(bill);
   } catch (_) {}
 }
@@ -159,23 +157,20 @@ function openDetail(bill) {
 }
 
 async function loadMeta() {
-  [activeContracts, payments, roomNames] = await Promise.all([
-    window.fetchAllPages(api, "/api/hop-dong/trang-thai/CON_HIEU_LUC", { sortBy: "ngayBatDau", direction: "desc" }).catch(() => []),
-    window.fetchAllPages(api, "/api/thanh-toan", { sortBy: "ngayThanhToan", direction: "desc" }).catch(() => []),
-    window.fetchAllPages(api, "/api/phong-tro", { sortBy: "tenPhong", direction: "asc" })
-      .then((rooms) => [...new Set((rooms || []).map((r) => r.tenPhong).filter(Boolean))])
-      .catch(() => []),
+  const [contractPage, roomSummary] = await Promise.all([
+    window.fetchPage(apiClient, "/api/hop-dong/trang-thai/CON_HIEU_LUC", {
+      page: 0,
+      size: 1000,
+      sortBy: "ngayBatDau",
+      direction: "desc",
+    }).catch(() => ({ content: [] })),
+    apiClient("/api/phong-tro/summary").catch(() => []),
   ]);
 
-  activeContracts = (activeContracts || [])
-    .filter((contract) => contract?.trangThai === "CON_HIEU_LUC")
+  activeContracts = (contractPage.content || [])
     .filter((contract) => !isExpiredContract(contract));
 
-  paidInvoiceIds = new Set(
-    payments
-      .filter((item) => item?.hoaDon?.hoaDonId)
-      .map((item) => Number(item.hoaDon.hoaDonId)),
-  );
+  roomNames = [...new Set((roomSummary || []).map((room) => room.tenPhong).filter(Boolean))];
 
   renderContractOptions();
   renderRoomFilters();
@@ -187,7 +182,7 @@ async function loadList() {
   const period = $("fPeriod").value.trim();
 
   try {
-    const pageData = await window.fetchPage(api, "/api/hoa-don/search", {
+    const pageData = await window.fetchPage(apiClient, "/api/hoa-don/search", {
       page: currentPage - 1,
       size: PAGE_SIZE,
       params: { status, room, period },
@@ -220,11 +215,12 @@ async function saveInvoice() {
     hopDongId: contractId,
     kyHoaDon: $("invPeriod").value.trim(),
     ngayLap: $("invDate").value,
-    trangThai: mapStatus($("invStatus").value),
+    // UI only allows creating unpaid invoice.
+    trangThai: "CHUA_THANH_TOAN",
   };
 
   try {
-    await api("/api/hoa-don", {
+    await apiClient("/api/hoa-don", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -279,7 +275,7 @@ function bindTableActions() {
     let bill = bills.find((item) => item.hoaDonId === invoiceId);
     if (!bill) {
       try {
-        bill = await api(`/api/hoa-don/${invoiceId}`);
+        bill = await apiClient(`/api/hoa-don/${invoiceId}`);
       } catch (_) {
         return;
       }
@@ -296,19 +292,14 @@ function bindTableActions() {
         alert("Hoa don nay da thanh toan.");
         return;
       }
-      localStorage.setItem("admin_invoice_focus", String(invoiceId));
-      window.location.href = "thanhtoan.html";
+      window.location.href = `thanhtoan.html?invoiceId=${invoiceId}`;
       return;
     }
 
     if (button.dataset.act === "delete") {
-      if (paidInvoiceIds.has(invoiceId)) {
-        alert("Khong the xoa hoa don da co thanh toan.");
-        return;
-      }
       if (!confirm("Xoa hoa don nay?")) return;
       try {
-        await api(`/api/hoa-don/${invoiceId}`, { method: "DELETE" });
+        await apiClient(`/api/hoa-don/${invoiceId}`, { method: "DELETE" });
         await loadMeta();
         await loadList();
       } catch (error) {
@@ -327,3 +318,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadList();
   await applyInvoiceFocus();
 });
+
+
+})();

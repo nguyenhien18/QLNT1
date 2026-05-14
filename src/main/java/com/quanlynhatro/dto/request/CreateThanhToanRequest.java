@@ -1,18 +1,18 @@
 package com.quanlynhatro.dto.request;
 
-import com.quanlynhatro.entity.ThanhToan;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Getter
-@Setter
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+
+import com.quanlynhatro.entity.ThanhToan;
+
+@Data
 public class CreateThanhToanRequest {
     @NotNull(message = "Hoa don khong duoc de trong")
     @Positive(message = "Hoa don khong hop le")

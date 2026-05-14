@@ -1,16 +1,18 @@
 package com.quanlynhatro.repository;
 
-import org.springframework.stereotype.Repository;
-
-import com.quanlynhatro.entity.ThanhToan;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.quanlynhatro.entity.HopDong;
+import com.quanlynhatro.entity.ThanhToan;
 
 @Repository
 public interface ThanhToanRepository extends JpaRepository<ThanhToan, Long>, JpaSpecificationExecutor<ThanhToan> {
@@ -54,8 +56,8 @@ public interface ThanhToanRepository extends JpaRepository<ThanhToan, Long>, Jpa
                    or tv.khachThue.khachThueId = :khachThueId)
             """)
     Page<ThanhToan> findAccessibleByKhachThueIdAndHopDongTrangThai(@Param("khachThueId") Long khachThueId,
-                                                                   @Param("trangThai") com.quanlynhatro.entity.HopDong.TrangThai trangThai,
-                                                                   Pageable pageable);
+                                                                    @Param("trangThai") HopDong.TrangThai trangThai,
+                                                                    Pageable pageable);
 
     @Query(value = """
             select tt
@@ -97,10 +99,10 @@ public interface ThanhToanRepository extends JpaRepository<ThanhToan, Long>, Jpa
               and (:period = '' or lower(coalesce(tt.hoaDon.kyHoaDon, '')) like concat('%', :period, '%'))
             """)
     Page<ThanhToan> searchAccessibleByKhachThueId(@Param("khachThueId") Long khachThueId,
-                                                  @Param("hopDongTrangThai") com.quanlynhatro.entity.HopDong.TrangThai hopDongTrangThai,
-                                                  @Param("status") ThanhToan.TrangThai status,
-                                                  @Param("period") String period,
-                                                  Pageable pageable);
+                                                   @Param("hopDongTrangThai") HopDong.TrangThai hopDongTrangThai,
+                                                   @Param("status") ThanhToan.TrangThai status,
+                                                   @Param("period") String period,
+                                                   Pageable pageable);
 
     @Query(value = """
             select distinct tt
@@ -129,5 +131,3 @@ public interface ThanhToanRepository extends JpaRepository<ThanhToan, Long>, Jpa
     boolean existsByHoaDon_HoaDonIdAndTrangThai(Long hoaDonId, ThanhToan.TrangThai trangThai);
     boolean existsByHoaDon_HopDong_HopDongId(Long hopDongId);
 }
-
-

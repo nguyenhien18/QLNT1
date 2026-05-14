@@ -1,17 +1,20 @@
 package com.quanlynhatro.config;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.entity.ChuTro;
-import com.quanlynhatro.entity.KhachThue;
-import com.quanlynhatro.repository.ChuTroRepository;
-import com.quanlynhatro.repository.KhachThueRepository;
 import java.util.List;
+
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
+import com.quanlynhatro.entity.ChuTro;
+import com.quanlynhatro.entity.KhachThue;
+import com.quanlynhatro.repository.ChuTroRepository;
+import com.quanlynhatro.repository.KhachThueRepository;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -46,5 +49,3 @@ public class CustomUserDetailsService implements UserDetailsService {
         throw new UsernameNotFoundException("Khong tim thay tai khoan: " + username);
     }
 }
-
-

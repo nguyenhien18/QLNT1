@@ -1,29 +1,50 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
+import java.util.function.Consumer;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.quanlynhatro.config.AppRoles;
 import com.quanlynhatro.config.CustomUserDetailsService;
 import com.quanlynhatro.config.JwtService;
 import com.quanlynhatro.dto.request.LoginRequest;
+import com.quanlynhatro.dto.response.AuthProfileResponse;
 import com.quanlynhatro.dto.response.LoginResponse;
 import com.quanlynhatro.entity.ChuTro;
 import com.quanlynhatro.entity.KhachThue;
 import com.quanlynhatro.exception.AppException;
 import com.quanlynhatro.repository.ChuTroRepository;
 import com.quanlynhatro.repository.KhachThueRepository;
-import java.util.function.Consumer;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
     private final ChuTroRepository chuTroRepository;
     private final KhachThueRepository khachThueRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final CustomUserDetailsService custaomUserDetailsService;
+    private final CustomUserDetailsService customUserDetailsService;
+
+    public AuthService(
+            ChuTroRepository chuTroRepository,
+            KhachThueRepository khachThueRepository,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            CustomUserDetailsService customUserDetailsService
+    ) {
+        this.chuTroRepository = chuTroRepository;
+        this.khachThueRepository = khachThueRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.customUserDetailsService = customUserDetailsService;
+    }
 
     public LoginResponse loginAdmin(LoginRequest request) {
         String username = request.getUsername() != null ? request.getUsername().trim() : "";
@@ -37,7 +58,7 @@ public class AuthService {
             chuTroRepository.save(chuTro);
         });
 
-        UserDetails userDetails = custaomUserDetailsService.loadUserByUsername(chuTro.getEmail());
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(chuTro.getEmail());
         String token = jwtService.generateToken(userDetails);
 
         return new LoginResponse(
@@ -55,6 +76,7 @@ public class AuthService {
         String rawPassword = request.getPassword() != null ? request.getPassword() : "";
 
         KhachThue khachThue = khachThueRepository.findByTenDangNhap(username)
+                .or(() -> khachThueRepository.findByEmail(username))
                 .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "Sai tai khoan hoac mat khau"));
 
         if (khachThue.getTrangThai() != KhachThue.TrangThai.HOAT_DONG) {
@@ -66,7 +88,7 @@ public class AuthService {
             khachThueRepository.save(khachThue);
         });
 
-        UserDetails userDetails = custaomUserDetailsService.loadUserByUsername(khachThue.getTenDangNhap());
+        UserDetails userDetails = customUserDetailsService.loadUserByUsername(khachThue.getTenDangNhap());
         String token = jwtService.generateToken(userDetails);
 
         return new LoginResponse(
@@ -101,6 +123,43 @@ public class AuthService {
             upgradeAction.accept(passwordEncoder.encode(rawPassword));
         }
     }
+
+    public AuthProfileResponse getCurrentProfile() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null || authentication.getAuthorities() == null) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "Ban chua dang nhap");
+        }
+
+        String username = authentication.getName();
+        Set<String> authorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+
+        if (authorities.contains(AppRoles.LANDLORD_AUTHORITY)) {
+            ChuTro chuTro = chuTroRepository.findByEmail(username)
+                    .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "Khong xac dinh duoc chu tro hien tai"));
+            return new AuthProfileResponse(
+                    chuTro.getChuTroId(),
+                    "ADMIN",
+                    chuTro.getEmail(),
+                    chuTro.getHoTen()
+            );
+        }
+
+        if (authorities.contains(AppRoles.TENANT_AUTHORITY)) {
+            KhachThue khachThue = khachThueRepository.findByTenDangNhap(username)
+                    .orElseThrow(() -> new AppException(HttpStatus.UNAUTHORIZED, "Khong xac dinh duoc nguoi thue hien tai"));
+            if (khachThue.getTrangThai() != KhachThue.TrangThai.HOAT_DONG) {
+                throw new AppException(HttpStatus.FORBIDDEN, "Tai khoan nguoi thue da bi khoa");
+            }
+            return new AuthProfileResponse(
+                    khachThue.getKhachThueId(),
+                    "USER",
+                    khachThue.getTenDangNhap(),
+                    khachThue.getHoTen()
+            );
+        }
+
+        throw new AppException(HttpStatus.FORBIDDEN, "Khong co quyen truy cap");
+    }
 }
-
-

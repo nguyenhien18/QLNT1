@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
@@ -64,7 +64,7 @@
             </div>
         </div>
 
-        <section class="invoice-section">
+        <section class="invoice-section pagination-page">
             <div class="invoice-section-head">
                 <div>
                     <h3>Danh sách hóa đơn</h3>
@@ -72,7 +72,7 @@
                 </div>
             </div>
 
-            <div class="list-table-wrap">
+            <div class="list-table-wrap pagination-content">
                 <table class="list-table invoice-table">
                     <thead>
                     <tr>
@@ -89,7 +89,7 @@
             </div>
             <div id="emptyState" class="empty-state" style="display:none;">Không có hóa đơn phù hợp bộ lọc.</div>
 
-            <div class="table-footer">
+            <div class="table-footer sticky-pagination">
                 <span id="invoicePagingInfo">Hiển thị 0 hóa đơn</span>
                 <div class="pagination">
                     <button id="prevPageBtn" type="button">Trước</button>
@@ -176,12 +176,16 @@
     </div>
 </div>
 
-<script src="../js/config.js"></script>
-<script src="../js/ui-helpers.js"></script>
-<script src="../js/core/modal.js"></script>
-<script src="../js/core/paged-table.js"></script>
-<script src="../js/core/page-filters.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/hoadon.js"></script>
+<script src="../js/config.js?v=20260508port8087fix2"></script>
+<script src="../js/ui-helpers.js?v=20260428fix"></script>
+<script src="../js/core/modal.js?v=20260428fix"></script>
+<script src="../js/core/page-filters.js?v=20260428fix"></script>
+<script src="../js/core/auth-session.js?v=20260508sessionfix1"></script>
+<script src="js/auth.js?v=20260508authhotfix2"></script>
+<script src="js/hoadon.js?v=20260428fix"></script>
 </body>
 </html>
+
+
+
+

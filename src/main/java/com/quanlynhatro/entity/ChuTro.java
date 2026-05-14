@@ -2,17 +2,14 @@ package com.quanlynhatro.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-@Entity
-@Table(name = "chu_tro")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "chu_tro")
 public class ChuTro {
 
     @Id
@@ -33,6 +30,3 @@ public class ChuTro {
     @Column(name = "mat_khau", nullable = false, length = 255)
     private String matKhau;
 }
-
-
-

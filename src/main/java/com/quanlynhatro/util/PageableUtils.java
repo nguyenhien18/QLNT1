@@ -1,11 +1,12 @@
 package com.quanlynhatro.util;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
 public final class PageableUtils {
-    private PageableUtils() {}
+    private PageableUtils() {
+    }
 
     public static boolean hasPagination(Integer page, Integer size, String sortBy, String direction) {
         return page != null || size != null || sortBy != null || direction != null;
@@ -19,4 +20,3 @@ public final class PageableUtils {
         return PageRequest.of(resolvedPage, resolvedSize, Sort.by(sortDirection, resolvedSortBy));
     }
 }
-

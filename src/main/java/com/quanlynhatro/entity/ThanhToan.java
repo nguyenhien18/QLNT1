@@ -1,21 +1,19 @@
 package com.quanlynhatro.entity;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
-@Entity
-@Table(name = "thanh_toan")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Entity
+@Table(name = "thanh_toan")
 public class ThanhToan {
 
     public enum TrangThai { THANH_CONG, THAT_BAI }
@@ -52,7 +50,3 @@ public class ThanhToan {
     @Column(name = "trang_thai", nullable = false)
     private TrangThai trangThai;
 }
-
-
-
-

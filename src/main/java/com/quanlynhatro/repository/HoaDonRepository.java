@@ -1,22 +1,25 @@
 package com.quanlynhatro.repository;
 
-import org.springframework.stereotype.Repository;
-
-import com.quanlynhatro.entity.HoaDon;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import com.quanlynhatro.entity.HoaDon;
+import com.quanlynhatro.entity.HopDong;
 
 @Repository
 public interface HoaDonRepository extends JpaRepository<HoaDon, Long>, JpaSpecificationExecutor<HoaDon> {
     List<HoaDon> findByPhongTro_PhongTroId(Long phongTroId);
     List<HoaDon> findByHopDong_HopDongId(Long hopDongId);
     List<HoaDon> findByTrangThai(HoaDon.TrangThai trangThai);
+    long countByTrangThai(HoaDon.TrangThai trangThai);
     List<HoaDon> findByKyHoaDon(String kyHoaDon);
 
     Page<HoaDon> findAll(Pageable pageable);
@@ -60,8 +63,8 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Long>, JpaSpecif
                    or tv.khachThue.khachThueId = :khachThueId)
             """)
     Page<HoaDon> findAccessibleByKhachThueIdAndHopDongTrangThai(@Param("khachThueId") Long khachThueId,
-                                                                @Param("trangThai") com.quanlynhatro.entity.HopDong.TrangThai trangThai,
-                                                                Pageable pageable);
+                                                                 @Param("trangThai") HopDong.TrangThai trangThai,
+                                                                 Pageable pageable);
 
     @Query(value = """
             select hdon
@@ -103,7 +106,7 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Long>, JpaSpecif
               and (:period = '' or lower(coalesce(hdon.kyHoaDon, '')) like concat('%', :period, '%'))
             """)
     Page<HoaDon> searchAccessibleByKhachThueId(@Param("khachThueId") Long khachThueId,
-                                               @Param("hopDongTrangThai") com.quanlynhatro.entity.HopDong.TrangThai hopDongTrangThai,
+                                               @Param("hopDongTrangThai") HopDong.TrangThai hopDongTrangThai,
                                                @Param("status") HoaDon.TrangThai status,
                                                @Param("period") String period,
                                                Pageable pageable);
@@ -137,5 +140,3 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Long>, JpaSpecif
     boolean existsByHopDong_HopDongId(Long hopDongId);
     boolean existsByPhongTro_PhongTroIdAndKyHoaDon(Long phongTroId, String kyHoaDon);
 }
-
-

@@ -8,4 +8,3 @@ public final class AppRoles {
     public static final String LANDLORD_AUTHORITY = "ROLE_ADMIN";
     public static final String TENANT_AUTHORITY = "ROLE_USER";
 }
-

@@ -1,15 +1,10 @@
 package com.quanlynhatro.dto.request;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
+import lombok.Data;
 
-@Getter
-@Setter
-@AllArgsConstructor
-@NoArgsConstructor
+import jakarta.validation.constraints.NotBlank;
+
+@Data
 public class LoginRequest {
     @NotBlank(message = "Ten dang nhap khong duoc de trong")
     private String username;

@@ -1,14 +1,7 @@
 package com.quanlynhatro.controller;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.dto.request.CreateKhachThueRequest;
-import com.quanlynhatro.dto.request.KhachThueUpdateRequest;
-import com.quanlynhatro.dto.response.ApiResponse;
-import com.quanlynhatro.dto.response.KhachThueResponse;
-import com.quanlynhatro.entity.KhachThue;
-import com.quanlynhatro.mapper.KhachThueMapper;
-import com.quanlynhatro.service.KhachThueService;
 import jakarta.validation.Valid;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,47 +12,77 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.quanlynhatro.dto.request.CreateKhachThueRequest;
+import com.quanlynhatro.dto.request.KhachThueUpdateRequest;
+import com.quanlynhatro.dto.response.ApiResponse;
+import com.quanlynhatro.dto.response.KhachThueResponse;
+import com.quanlynhatro.dto.response.PageResponse;
+import com.quanlynhatro.entity.KhachThue;
+import com.quanlynhatro.mapper.KhachThueMapper;
+import com.quanlynhatro.service.KhachThueService;
+
+import lombok.RequiredArgsConstructor;
+
 @RestController
 @RequestMapping("/api/khach-thue")
 @RequiredArgsConstructor
-public class KhachThueController extends ApiControllerSupport {
+public class KhachThueController {
 
     private final KhachThueService khachThueService;
     private final KhachThueMapper khachThueMapper;
 
     @GetMapping
-    public ApiResponse<?> getAll(@RequestParam(required = false) Integer page,
+    public ApiResponse<PageResponse<KhachThueResponse>> getAll(@RequestParam(required = false) Integer page,
                                  @RequestParam(required = false) Integer size,
                                  @RequestParam(required = false) String sortBy,
                                  @RequestParam(required = false) String direction) {
-        return pagedMapped(
-                page, size, sortBy, direction,
-                khachThueService::getAll,
-                () -> khachThueService.getPage(page, size, sortBy, direction),
-                khachThueMapper::toResponse
-        );
+        return ApiResponse.<PageResponse<KhachThueResponse>>builder()
+                .code(200)
+                .message("success")
+                .result(PageResponse.from(
+                        khachThueService.getPage(page, size, sortBy, direction).map(khachThueMapper::toKhachThueResponse)
+                ))
+                .build();
     }
 
     @GetMapping("/{id}")
     public ApiResponse<KhachThueResponse> getById(@PathVariable Long id) {
-        return success(khachThueMapper.toResponse(khachThueService.getById(id)));
+        return ApiResponse.<KhachThueResponse>builder()
+                .code(200)
+                .message("success")
+                .result(khachThueMapper.toKhachThueResponse(khachThueService.getById(id)))
+                .build();
     }
 
     @GetMapping("/email")
     public ApiResponse<KhachThueResponse> getByEmail(@RequestParam String email) {
-        return success(khachThueMapper.toResponse(khachThueService.getByEmail(email)));
+        return ApiResponse.<KhachThueResponse>builder()
+                .code(200)
+                .message("success")
+                .result(khachThueMapper.toKhachThueResponse(khachThueService.getByEmail(email)))
+                .build();
     }
 
     @GetMapping("/ten-dang-nhap")
     public ApiResponse<KhachThueResponse> getByTenDangNhap(@RequestParam String tenDangNhap) {
-        return success(khachThueMapper.toResponse(khachThueService.getByTenDangNhap(tenDangNhap)));
+        return ApiResponse.<KhachThueResponse>builder()
+                .code(200)
+                .message("success")
+                .result(khachThueMapper.toKhachThueResponse(khachThueService.getByTenDangNhap(tenDangNhap)))
+                .build();
     }
 
     @GetMapping("/search")
-    public ApiResponse<?> search(@RequestParam(required = false) String keyword,
+    public ApiResponse<PageResponse<KhachThueResponse>> search(@RequestParam(required = false) String keyword,
                                  @RequestParam(required = false) Integer page,
                                  @RequestParam(required = false) Integer size) {
-        return success(khachThueService.search(keyword, page, size).map(khachThueMapper::toResponse));
+        return ApiResponse.<PageResponse<KhachThueResponse>>builder()
+                .code(200)
+                .message("success")
+                .result(PageResponse.from(
+                        khachThueService.search(keyword, page, size).map(khachThueMapper::toKhachThueResponse)
+                ))
+                .build();
     }
 
     @PostMapping
@@ -75,17 +98,30 @@ public class KhachThueController extends ApiControllerSupport {
         khachThue.setTenDangNhap(request.getTenDangNhap());
         khachThue.setMatKhau(request.getMatKhau());
         khachThue.setTrangThai(request.getTrangThai());
-        return success(khachThueMapper.toResponse(khachThueService.create(khachThue)));
+        return ApiResponse.<KhachThueResponse>builder()
+                .code(200)
+                .message("success")
+                .result(khachThueMapper.toKhachThueResponse(khachThueService.create(khachThue)))
+                .build();
     }
 
     @PutMapping("/{id}")
     public ApiResponse<KhachThueResponse> update(@PathVariable Long id, @Valid @RequestBody KhachThueUpdateRequest request) {
-        return success(khachThueMapper.toResponse(khachThueService.update(id, request)));
+        return ApiResponse.<KhachThueResponse>builder()
+                .code(200)
+                .message("success")
+                .result(khachThueMapper.toKhachThueResponse(khachThueService.update(id, request)))
+                .build();
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         khachThueService.delete(id);
-        return successMessage("Xoa khach thue thanh cong");
+        return ApiResponse.<Void>builder()
+                .code(200)
+                .message("Xoa khach thue thanh cong")
+                .build();
     }
+
 }
+

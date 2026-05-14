@@ -1,19 +1,23 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
-import com.quanlynhatro.entity.DichVu;
-import com.quanlynhatro.exception.AppException;
-import com.quanlynhatro.repository.DichVuRepository;
 import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.quanlynhatro.entity.DichVu;
+import com.quanlynhatro.exception.AppException;
+import com.quanlynhatro.repository.DichVuRepository;
+import com.quanlynhatro.util.PageableUtils;
+
 @Service
-@RequiredArgsConstructor
 public class DichVuService {
     private final DichVuRepository dichVuRepository;
+
+    public DichVuService(DichVuRepository dichVuRepository) {
+        this.dichVuRepository = dichVuRepository;
+    }
 
     public List<DichVu> getAll() {
         return dichVuRepository.findAll();
@@ -29,6 +33,7 @@ public class DichVuService {
     }
 
     public DichVu create(DichVu dichVu) {
+        normalize(dichVu);
         return dichVuRepository.save(dichVu);
     }
 
@@ -46,7 +51,19 @@ public class DichVuService {
     private void applyChanges(DichVu target, DichVu source) {
         target.setTenDichVu(source.getTenDichVu());
         target.setGiaDichVu(source.getGiaDichVu());
+        target.setDonViTinh(trimToNull(source.getDonViTinh()));
+    }
+
+    private void normalize(DichVu dichVu) {
+        dichVu.setTenDichVu(trimToNull(dichVu.getTenDichVu()));
+        dichVu.setDonViTinh(trimToNull(dichVu.getDonViTinh()));
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }
-
-

@@ -1,65 +1,33 @@
-﻿const { api, money: fmtMoney } = window.AppUtils || {};
+(function () {
+const { api: apiClient, money: fmtMoney } = window.AppUtils || {};
 const $ = (id) => document.getElementById(id);
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    const [rooms, contracts, bills, payments] = await Promise.all([
-      window.fetchAllPages(api, "/api/phong-tro", { sortBy: "phongTroId", direction: "desc" }).catch(() => []),
-      window.fetchAllPages(api, "/api/hop-dong", { sortBy: "ngayBatDau", direction: "desc" }).catch(() => []),
-      window.fetchAllPages(api, "/api/hoa-don", { sortBy: "ngayLap", direction: "desc" }).catch(() => []),
-      window.fetchAllPages(api, "/api/thanh-toan", { sortBy: "ngayThanhToan", direction: "desc" }).catch(() => [])
-    ]);
-
-    const total = rooms.length;
-    const rented = rooms.filter(r => r.trangThai === "DA_CHO_THUE").length;
-    const empty = rooms.filter(r => r.trangThai === "TRONG").length;
+    const summary = await apiClient("/api/thong-ke/tong-quan");
+    const total = Number(summary.totalRooms || 0);
+    const rented = Number(summary.rentedRooms || 0);
+    const empty = Number(summary.emptyRooms || Math.max(0, total - rented));
+    const totalVip = Number(summary.totalVipRooms || 0);
+    const rentedVip = Number(summary.rentedVipRooms || 0);
     const emptyRate = total ? ((empty / total) * 100).toFixed(1) : "0.0";
 
     $("totalRooms").textContent = total;
-    $("totalRoomsSub").textContent = `${rented} đang thuê`;
+    $("totalRoomsSub").textContent = `${rented} dang thue`;
+
+    $("vipRooms").textContent = totalVip;
+    $("vipRoomsSub").textContent = `${rentedVip} dang thue`;
 
     $("emptyRooms").textContent = empty;
-    $("emptyRoomsSub").textContent = `${emptyRate}% tổng phòng`;
+    $("emptyRoomsSub").textContent = `${emptyRate}% tong phong`;
 
-    const unpaid = bills.filter(b => b.trangThai === "CHUA_THANH_TOAN").length;
-    $("dueBills").textContent = unpaid;
-
-    const today = new Date();
-    const expiring = contracts.filter(c => {
-      if (c.trangThai !== "CON_HIEU_LUC" || !c.ngayKetThuc) return false;
-      const end = new Date(c.ngayKetThuc);
-      const diff = (end - today) / 86400000;
-      return diff >= 0 && diff <= 30;
-    }).length;
-    $("expiringContracts").textContent = expiring;
-
-    const now = new Date();
-    let monthRevenue = 0;
-    let yearRevenue = 0;
-
-    payments.forEach(payment => {
-      if (payment.trangThai !== "THANH_CONG") return;
-      const d = new Date(payment.ngayThanhToan);
-      if (Number.isNaN(d.getTime())) return;
-      const amount = Number(payment.soTien || payment.hoaDon?.tongTien || 0);
-
-      if (d.getFullYear() === now.getFullYear()) {
-        yearRevenue += amount;
-        if (d.getMonth() === now.getMonth()) {
-          monthRevenue += amount;
-        }
-      }
-    });
-
-    $("monthlyRevenue").textContent = fmtMoney(monthRevenue);
-    $("yearRevenue").textContent = fmtMoney(yearRevenue);
-  } catch (e) {
-    console.error(e);
+    $("dueBills").textContent = Number(summary.unpaidInvoices || 0);
+    $("expiringContracts").textContent = Number(summary.expiringContracts || 0);
+    $("monthlyRevenue").textContent = fmtMoney(summary.monthlyRevenue || 0);
+    $("yearRevenue").textContent = fmtMoney(summary.yearlyRevenue || 0);
+  } catch (error) {
+    console.error("Khong the tai dashboard summary:", error);
   }
 });
 
-
-
-
-
-
+})();

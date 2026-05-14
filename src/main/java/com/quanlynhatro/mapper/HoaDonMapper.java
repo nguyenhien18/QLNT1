@@ -1,12 +1,13 @@
 package com.quanlynhatro.mapper;
 
+import org.springframework.stereotype.Component;
+
 import com.quanlynhatro.dto.response.HoaDonResponse;
 import com.quanlynhatro.entity.HoaDon;
-import org.springframework.stereotype.Component;
 
 @Component
 public class HoaDonMapper {
-    public HoaDonResponse toResponse(HoaDon entity) {
+    public HoaDonResponse toHoaDonResponse(HoaDon entity) {
         return new HoaDonResponse(
                 entity.getHoaDonId(),
                 entity.getHopDong() == null ? null : entity.getHopDong().getHopDongId(),

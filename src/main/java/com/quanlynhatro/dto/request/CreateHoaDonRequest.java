@@ -1,16 +1,16 @@
 package com.quanlynhatro.dto.request;
 
-import com.quanlynhatro.entity.HoaDon;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.time.LocalDate;
 
-@Getter
-@Setter
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+
+import com.quanlynhatro.entity.HoaDon;
+
+@Data
 public class CreateHoaDonRequest {
     @NotNull(message = "Hop dong khong duoc de trong")
     private Long hopDongId;

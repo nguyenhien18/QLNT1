@@ -1,7 +1,8 @@
 package com.quanlynhatro.exception;
 
-import com.quanlynhatro.enums.ErrorCode;
 import org.springframework.http.HttpStatus;
+
+import com.quanlynhatro.enums.ErrorCode;
 
 public class AppException extends RuntimeException {
     private final ErrorCode errorCode;

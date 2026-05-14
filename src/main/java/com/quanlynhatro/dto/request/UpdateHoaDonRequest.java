@@ -1,14 +1,13 @@
 package com.quanlynhatro.dto.request;
 
-import com.quanlynhatro.entity.HoaDon;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Getter
-@Setter
+import com.quanlynhatro.entity.HoaDon;
+
+@Data
 public class UpdateHoaDonRequest {
     private Long hopDongId;
     private Long phongTroId;

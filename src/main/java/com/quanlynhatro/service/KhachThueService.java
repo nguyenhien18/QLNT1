@@ -1,17 +1,9 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
-import com.quanlynhatro.dto.request.KhachThueUpdateRequest;
-import com.quanlynhatro.entity.HopDong;
-import com.quanlynhatro.entity.KhachThue;
-import com.quanlynhatro.exception.AppException;
-import com.quanlynhatro.repository.HopDongRepository;
-import com.quanlynhatro.repository.KhachThueRepository;
-import com.quanlynhatro.repository.ThanhVienPhongRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,13 +11,33 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.quanlynhatro.dto.request.KhachThueUpdateRequest;
+import com.quanlynhatro.entity.HopDong;
+import com.quanlynhatro.entity.KhachThue;
+import com.quanlynhatro.exception.AppException;
+import com.quanlynhatro.repository.HopDongRepository;
+import com.quanlynhatro.repository.KhachThueRepository;
+import com.quanlynhatro.repository.ThanhVienPhongRepository;
+import com.quanlynhatro.util.PageableUtils;
+
 @Service
-@RequiredArgsConstructor
 public class KhachThueService {
     private final KhachThueRepository khachThueRepository;
     private final PasswordEncoder passwordEncoder;
     private final HopDongRepository hopDongRepository;
     private final ThanhVienPhongRepository thanhVienPhongRepository;
+
+    public KhachThueService(
+            KhachThueRepository khachThueRepository,
+            PasswordEncoder passwordEncoder,
+            HopDongRepository hopDongRepository,
+            ThanhVienPhongRepository thanhVienPhongRepository
+    ) {
+        this.khachThueRepository = khachThueRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.hopDongRepository = hopDongRepository;
+        this.thanhVienPhongRepository = thanhVienPhongRepository;
+    }
 
     public List<KhachThue> getAll() {
         return khachThueRepository.findAll(Sort.by(Sort.Direction.DESC, "khachThueId"));
@@ -161,7 +173,7 @@ public class KhachThueService {
     public void delete(Long id) {
         getById(id);
         if (hopDongRepository.existsByKhachThue_KhachThueId(id) || thanhVienPhongRepository.existsByKhachThue_KhachThueId(id)) {
-            throw new AppException(HttpStatus.CONFLICT, "Khong the xoa khach thue da co lichu sou hop dong");
+            throw new AppException(HttpStatus.CONFLICT, "Khong the xoa khach thue da co lich su hop dong");
         }
         khachThueRepository.deleteById(id);
     }
@@ -197,5 +209,3 @@ public class KhachThueService {
         }
     }
 }
-
-

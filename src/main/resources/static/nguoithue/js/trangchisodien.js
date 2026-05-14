@@ -1,5 +1,7 @@
-﻿const { api, money: fmtMoney } = window.AppUtils || {};
+(function () {
+const { api: apiClient, money: fmtMoney } = window.AppUtils || {};
 const { escapeHtml } = window.UiHelpers || {};
+const { bindChanges, bindInputs, bindPagination } = window.PageFilters || {};
 
 const typeSelect = document.getElementById('typeSelect');
 const periodInput = document.getElementById('periodInput');
@@ -11,18 +13,12 @@ const pagingInfo = document.getElementById('meterPagingInfo');
 const pageInfo = document.getElementById('pageInfo');
 const prevBtn = document.getElementById('prevPageBtn');
 const nextBtn = document.getElementById('nextPageBtn');
-const roomNameText = document.getElementById('roomNameText');
 
 const PAGE_SIZE = 5;
 let page = 1;
 let totalPages = 1;
 let totalItems = 0;
 let meters = [];
-let profile = null;
-
-async function loadProfile() {
-  profile = await api('/api/tenant/profile').catch(() => null);
-}
 
 function typeBadge(type) {
   return type === 'DIEN'
@@ -49,9 +45,6 @@ function render() {
   const start = totalItems ? (page - 1) * PAGE_SIZE + 1 : 0;
   const end = Math.min(page * PAGE_SIZE, totalItems);
 
-  const roomNames = [...new Set(meters.map(x => x.phongTro?.tenPhong).filter(Boolean))];
-  roomNameText.textContent = roomNames.length ? `Phong: ${roomNames.join(', ')}` : (profile?.hoTen ? `Nguoi thue: ${profile.hoTen}` : 'Phong hien tai');
-
   countText.textContent = `${totalItems} chi so duoc tim thay`;
   pagingInfo.textContent = totalItems ? `Hien thi ${start} - ${end} / ${totalItems} chi so` : 'Hien thi 0 chi so';
   pageInfo.textContent = `Trang ${page} / ${totalPages}`;
@@ -72,7 +65,7 @@ async function loadMeters() {
   const type = typeSelect.value;
   const period = periodInput.value.trim();
   try {
-    const pageData = await window.fetchPage(api, '/api/tenant/chi-so/search', {
+    const pageData = await window.fetchPage(apiClient, '/api/tenant/chi-so/search', {
       page: page - 1,
       size: PAGE_SIZE,
       params: { type, period }
@@ -94,17 +87,21 @@ async function loadMeters() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  typeSelect.addEventListener('change', () => { page = 1; loadMeters(); });
-  periodInput.addEventListener('input', () => { page = 1; loadMeters(); });
+  bindChanges?.(['typeSelect'], () => { page = 1; loadMeters(); });
+  bindInputs?.(['periodInput'], () => { page = 1; loadMeters(); });
   resetBtn.addEventListener('click', () => {
     typeSelect.value = 'ALL';
     periodInput.value = '';
     page = 1;
     loadMeters();
   });
-  prevBtn.addEventListener('click', () => { if (page > 1) { page--; loadMeters(); } });
-  nextBtn.addEventListener('click', () => { if (page < totalPages) { page++; loadMeters(); } });
+  bindPagination?.('prevPageBtn', 'nextPageBtn', {
+    get page() { return page; },
+    set page(v) { page = v; },
+    get totalPages() { return totalPages; },
+  }, loadMeters);
 
-  await loadProfile();
   await loadMeters();
 });
+
+})();

@@ -1,7 +1,16 @@
 package com.quanlynhatro.service;
 
-import lombok.RequiredArgsConstructor;
-import com.quanlynhatro.util.PageableUtils;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.quanlynhatro.dto.request.CreateHoaDonRequest;
 import com.quanlynhatro.dto.response.InvoicePreviewResponse;
 import com.quanlynhatro.entity.ChiSo;
@@ -9,6 +18,7 @@ import com.quanlynhatro.entity.HoaDon;
 import com.quanlynhatro.entity.HopDong;
 import com.quanlynhatro.entity.PhongDichVu;
 import com.quanlynhatro.entity.PhongTro;
+import com.quanlynhatro.entity.ThanhToan;
 import com.quanlynhatro.entity.ThanhVienPhong;
 import com.quanlynhatro.exception.AppException;
 import com.quanlynhatro.repository.ChiSoRepository;
@@ -18,18 +28,9 @@ import com.quanlynhatro.repository.PhongDichVuRepository;
 import com.quanlynhatro.repository.PhongTroRepository;
 import com.quanlynhatro.repository.ThanhToanRepository;
 import com.quanlynhatro.repository.ThanhVienPhongRepository;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Locale;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import com.quanlynhatro.util.PageableUtils;
 
 @Service
-@RequiredArgsConstructor
 public class HoaDonService {
     private final HoaDonRepository hoaDonRepository;
     private final HopDongRepository hopDongRepository;
@@ -38,6 +39,24 @@ public class HoaDonService {
     private final PhongDichVuRepository phongDichVuRepository;
     private final ThanhVienPhongRepository thanhVienPhongRepository;
     private final ThanhToanRepository thanhToanRepository;
+
+    public HoaDonService(
+            HoaDonRepository hoaDonRepository,
+            HopDongRepository hopDongRepository,
+            PhongTroRepository phongTroRepository,
+            ChiSoRepository chiSoRepository,
+            PhongDichVuRepository phongDichVuRepository,
+            ThanhVienPhongRepository thanhVienPhongRepository,
+            ThanhToanRepository thanhToanRepository
+    ) {
+        this.hoaDonRepository = hoaDonRepository;
+        this.hopDongRepository = hopDongRepository;
+        this.phongTroRepository = phongTroRepository;
+        this.chiSoRepository = chiSoRepository;
+        this.phongDichVuRepository = phongDichVuRepository;
+        this.thanhVienPhongRepository = thanhVienPhongRepository;
+        this.thanhToanRepository = thanhToanRepository;
+    }
 
     public List<HoaDon> getAll() {
         return hoaDonRepository.findAll();
@@ -114,8 +133,22 @@ public class HoaDonService {
         );
     }
 
+    public boolean existsByLockScope(Long hopDongId, Long phongTroId, String kyHoaDon) {
+        if (kyHoaDon == null || kyHoaDon.isBlank()) {
+            return false;
+        }
+        if (hopDongId != null && hoaDonRepository.existsByHopDong_HopDongIdAndKyHoaDon(hopDongId, kyHoaDon)) {
+            return true;
+        }
+        return phongTroId != null && hoaDonRepository.existsByPhongTro_PhongTroIdAndKyHoaDon(phongTroId, kyHoaDon);
+    }
+
     public InvoicePreviewResponse previewByRoom(Long phongTroId, String kyHoaDon) {
-        HopDong hopDong = hopDongRepository.findFirstByPhongTro_PhongTroIdAndTrangThaiOrderByNgayBatDauDesc(phongTroId, HopDong.TrangThai.CON_HIEU_LUC)
+        HopDong hopDong = hopDongRepository
+                .findFirstByPhongTro_PhongTroIdAndTrangThaiOrderByNgayBatDauDesc(
+                        phongTroId,
+                        HopDong.TrangThai.CON_HIEU_LUC
+                )
                 .orElseThrow(() -> new AppException(HttpStatus.BAD_REQUEST, "Phong nay chua co hop dong con hieu luc"));
         return previewByContract(hopDong.getHopDongId(), kyHoaDon);
     }
@@ -242,14 +275,20 @@ public class HoaDonService {
         if (data.getTrangThai() != null) {
             if (data.getTrangThai() == HoaDon.TrangThai.DA_THANH_TOAN
                     && !hasSuccessfulPaymentMatchingTotal(hoaDon.getHoaDonId(), hoaDon.getTongTien())) {
-                throw new AppException(HttpStatus.CONFLICT, "Khong the cap nhat hoa don sang da thanh toan khi payment thanh cong chua khop tong tien");
+                throw new AppException(
+                        HttpStatus.CONFLICT,
+                        "Khong the cap nhat hoa don sang da thanh toan khi payment thanh cong chua khop tong tien"
+                );
             }
             hoaDon.setTrangThai(data.getTrangThai());
         }
 
         if (hoaDon.getTrangThai() == HoaDon.TrangThai.DA_THANH_TOAN
                 && !hasSuccessfulPaymentMatchingTotal(hoaDon.getHoaDonId(), hoaDon.getTongTien())) {
-            throw new AppException(HttpStatus.CONFLICT, "Khong the cap nhat hoa don da thanh toan khi tong tien khong khop payment thanh cong");
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "Khong the cap nhat hoa don da thanh toan khi tong tien khong khop payment thanh cong"
+            );
         }
 
         return hoaDonRepository.save(hoaDon);
@@ -258,7 +297,10 @@ public class HoaDonService {
     public HoaDon markAsPaid(Long id) {
         HoaDon hoaDon = getById(id);
         if (!hasSuccessfulPaymentMatchingTotal(id, hoaDon.getTongTien())) {
-            throw new AppException(HttpStatus.CONFLICT, "Khong the danh dau da thanh toan khi payment thanh cong chua khop tong tien hoa don");
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "Khong the danh dau da thanh toan khi payment thanh cong chua khop tong tien hoa don"
+            );
         }
         hoaDon.setTrangThai(HoaDon.TrangThai.DA_THANH_TOAN);
         return hoaDonRepository.save(hoaDon);
@@ -266,7 +308,7 @@ public class HoaDonService {
 
     private boolean hasSuccessfulPaymentMatchingTotal(Long hoaDonId, BigDecimal expectedTotal) {
         return thanhToanRepository.findByHoaDon_HoaDonId(hoaDonId)
-                .filter(tt -> tt.getTrangThai() == com.quanlynhatro.entity.ThanhToan.TrangThai.THANH_CONG)
+                .filter(tt -> tt.getTrangThai() == ThanhToan.TrangThai.THANH_CONG)
                 .map(tt -> defaultZero(tt.getSoTien()).compareTo(defaultZero(expectedTotal)) == 0)
                 .orElse(false);
     }
@@ -276,7 +318,7 @@ public class HoaDonService {
             throw new AppException(HttpStatus.NOT_FOUND, "Khong tim thay hoa don");
         }
         if (thanhToanRepository.existsByHoaDon_HoaDonId(id)) {
-            throw new AppException(HttpStatus.CONFLICT, "Khong the xoa hoa don  c ban ghi thanh toan");
+            throw new AppException(HttpStatus.CONFLICT, "Khong the xoa hoa don da co ban ghi thanh toan");
         }
         hoaDonRepository.deleteById(id);
     }
@@ -363,10 +405,3 @@ public class HoaDonService {
         }
     }
 }
-
-
-
-
-
-
-

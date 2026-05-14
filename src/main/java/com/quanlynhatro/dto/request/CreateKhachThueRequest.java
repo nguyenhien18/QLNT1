@@ -1,17 +1,17 @@
 package com.quanlynhatro.dto.request;
 
-import com.quanlynhatro.entity.KhachThue;
+import lombok.Data;
+
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
 
-import java.time.LocalDate;
+import com.quanlynhatro.entity.KhachThue;
 
-@Getter
-@Setter
+@Data
 public class CreateKhachThueRequest {
     @NotBlank(message = "Ho ten khong duoc de trong")
     @Size(max = 150, message = "Ho ten toi da 150 ky tu")

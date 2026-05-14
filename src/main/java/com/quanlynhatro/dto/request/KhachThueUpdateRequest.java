@@ -1,16 +1,16 @@
 package com.quanlynhatro.dto.request;
 
-import com.quanlynhatro.entity.KhachThue;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
 import java.time.LocalDate;
 
-@Getter
-@Setter
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+import com.quanlynhatro.entity.KhachThue;
+
+@Data
 public class KhachThueUpdateRequest {
     @Size(max = 150, message = "Ho ten toi da 150 ky tu")
     private String hoTen;

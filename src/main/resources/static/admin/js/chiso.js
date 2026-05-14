@@ -1,7 +1,8 @@
-﻿const PAGE_SIZE = 4;
+(function () {
+const PAGE_SIZE = 4;
 const { buildOptions, textOrDash } = window.UiHelpers || {};
 const { bindChanges, bindInputs } = window.PageFilters || {};
-const { api, money: fmtMoney, date: fmtDate, todayISO, labels } = window.AppUtils || {};
+const { api: apiClient, money: fmtMoney, date: fmtDate, todayISO, labels } = window.AppUtils || {};
 const $ = (id) => document.getElementById(id);
 
 let currentPage = 1;
@@ -15,7 +16,7 @@ let invoiceLockedKeys = new Set();
 function openModal() { window.Modal?.open("meterModal"); }
 function closeModal() { window.Modal?.close("meterModal"); }
 function getUnit(type) { return type === "DIEN" ? "kWh" : "m3"; }
-function getTypeLabel(type) { return labels?.meterType(type) || (type === "DIEN" ? "Điện" : "Nước"); }
+function getTypeLabel(type) { return labels?.meterType(type) || (type === "DIEN" ? "Dien" : "Nuoc"); }
 function getTypeBadgeClass(type) { return type === "DIEN" ? "badge badge-wait" : "badge badge-green"; }
 
 function calcConsumption(meter) {
@@ -36,18 +37,21 @@ function isExpiredContract(c) {
   return !!(c?.ngayKetThuc && c.ngayKetThuc < todayISO());
 }
 
+function isSelectableContract(contract) {
+  return contract?.trangThai === "CON_HIEU_LUC" && !isExpiredContract(contract);
+}
+
 function renderOptions() {
-  const selectableContracts = (contracts || [])
-    .filter((c) => c?.trangThai === "CON_HIEU_LUC")
-    .filter((c) => !isExpiredContract(c));
-  $("meterContract").innerHTML = '<option value="">-- Chọn hợp đồng --</option>' + selectableContracts
+  const selectableContracts = (contracts || []).filter(isSelectableContract);
+  const roomNames = [...new Set((rooms || []).map((room) => room?.tenPhong).filter(Boolean))];
+  $("meterContract").innerHTML = '<option value="">-- Chon hop dong --</option>' + selectableContracts
     .map((c) => {
       const room = c?.phongTro?.tenPhong || "-";
       const tenant = c?.khachThue?.tenDangNhap || c?.khachThue?.hoTen || "-";
       return `<option value="${c.hopDongId}">#${c.hopDongId} - ${room} - ${tenant}</option>`;
     })
     .join("");
-  $("filterRoom").innerHTML = buildOptions(rooms, (room) => room.tenPhong, (room) => room.tenPhong, "Tất cả");
+  $("filterRoom").innerHTML = buildOptions(roomNames, (room) => room, (room) => room, "Tat ca");
 }
 
 function renderMeterRow(meter) {
@@ -64,8 +68,8 @@ function renderMeterRow(meter) {
       <td>${fmtMoney(calcAmount(meter))}</td>
       <td>
         <div class="action-group">
-          <button class="btn-small btn-edit" type="button" data-action="edit" data-id="${meter.chiSoId}">Sửa</button>
-          <button class="btn-small btn-delete" type="button" data-action="delete" data-id="${meter.chiSoId}">Xóa</button>
+          <button class="btn-small btn-edit" type="button" data-action="edit" data-id="${meter.chiSoId}">Sua</button>
+          <button class="btn-small btn-delete" type="button" data-action="delete" data-id="${meter.chiSoId}">Xoa</button>
         </div>
       </td>
     </tr>`;
@@ -75,8 +79,8 @@ function render() {
   const startIndex = totalItems ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
   const endIndex = Math.min(currentPage * PAGE_SIZE, totalItems);
 
-  $("meterCountText").textContent = `${totalItems} chỉ số được tìm thấy`;
-  $("meterPagingInfo").textContent = totalItems ? `Hiển thị ${startIndex} - ${endIndex} / ${totalItems} chỉ số` : "Hiển thị 0 chỉ số";
+  $("meterCountText").textContent = `${totalItems} chi so duoc tim thay`;
+  $("meterPagingInfo").textContent = totalItems ? `Hien thi ${startIndex} - ${endIndex} / ${totalItems} chi so` : "Hien thi 0 chi so";
   $("pageInfo").textContent = `Trang ${currentPage} / ${totalPages}`;
   $("prevPageBtn").disabled = currentPage <= 1;
   $("nextPageBtn").disabled = currentPage >= totalPages;
@@ -91,7 +95,7 @@ function resetForm() {
 }
 
 function fillForm(meter) {
-  $("meterTitle").textContent = "Cập nhật chỉ số";
+  $("meterTitle").textContent = "C?p nh?t chi so";
   $("meterId").value = meter.chiSoId;
   $("meterType").value = meter.loai || "DIEN";
   $("meterContract").value = meter.hopDong?.hopDongId || inferContractIdForMeter(meter) || "";
@@ -106,9 +110,10 @@ function fillForm(meter) {
 function buildPayload() {
   const contractId = Number($("meterContract").value || 0);
   const contract = contracts.find((c) => c.hopDongId === contractId);
+  const roomId = contract?.phongTro?.phongTroId ? Number(contract.phongTro.phongTroId) : null;
   return {
-    hopDong: { hopDongId: contractId },
-    phongTro: contract?.phongTro?.phongTroId ? { phongTroId: Number(contract.phongTro.phongTroId) } : undefined,
+    hopDongId: contractId || null,
+    phongTroId: roomId,
     loai: $("meterType").value,
     ky: $("meterPeriod").value.trim(),
     thoiDiem: $("meterDate").value,
@@ -119,10 +124,23 @@ function buildPayload() {
 }
 
 async function loadMeta() {
-  [rooms, contracts] = await Promise.all([
-    window.fetchAllPages(api, "/api/phong-tro", { sortBy: "phongTroId", direction: "desc" }).catch(() => []),
-    window.fetchAllPages(api, "/api/hop-dong", { sortBy: "ngayBatDau", direction: "desc" }).catch(() => []),
+  const [roomPage, contractPage] = await Promise.all([
+    window.fetchPage(apiClient, "/api/phong-tro", {
+      page: 0,
+      size: 1000,
+      sortBy: "phongTroId",
+      direction: "desc",
+    }).catch(() => ({ content: [] })),
+    window.fetchPage(apiClient, "/api/hop-dong", {
+      page: 0,
+      size: 1000,
+      sortBy: "ngayBatDau",
+      direction: "desc",
+    }).catch(() => ({ content: [] })),
   ]);
+
+  rooms = roomPage.content || [];
+  contracts = contractPage.content || [];
   renderOptions();
 }
 
@@ -130,18 +148,17 @@ function inferContractIdForMeter(meter) {
   const roomId = meter?.phongTro?.phongTroId;
   if (!roomId) return "";
   const meterDate = meter?.thoiDiem ? new Date(meter.thoiDiem) : null;
-  const matched = (contracts || [])
-    .filter((c) => c?.trangThai !== "HUY")
-    .filter((c) => c?.phongTro?.phongTroId === roomId)
-    .filter((c) => {
-      if (!meterDate) return true;
-      const start = c?.ngayBatDau ? new Date(c.ngayBatDau) : null;
-      const end = c?.ngayKetThuc ? new Date(c.ngayKetThuc) : null;
-      const afterStart = !start || meterDate >= start;
-      const beforeEnd = !end || meterDate <= end;
-      return afterStart && beforeEnd;
-    })
-    .sort((a, b) => String(b?.ngayBatDau || "").localeCompare(String(a?.ngayBatDau || "")));
+  const matched = (contracts || []).filter((contract) => {
+    if (contract?.trangThai === "HUY") return false;
+    if (contract?.phongTro?.phongTroId !== roomId) return false;
+    if (!meterDate) return true;
+
+    const start = contract?.ngayBatDau ? new Date(contract.ngayBatDau) : null;
+    const end = contract?.ngayKetThuc ? new Date(contract.ngayKetThuc) : null;
+    return (!start || meterDate >= start) && (!end || meterDate <= end);
+  });
+
+  matched.sort((a, b) => String(b?.ngayBatDau || "").localeCompare(String(a?.ngayBatDau || "")));
   return matched[0]?.hopDongId || "";
 }
 
@@ -151,7 +168,7 @@ async function loadList() {
   const period = $("filterPeriod").value.trim();
 
   try {
-    const pageData = await window.fetchPage(api, "/api/chi-so/search", {
+    const pageData = await window.fetchPage(apiClient, "/api/chi-so/search", {
       page: currentPage - 1,
       size: PAGE_SIZE,
       params: { type, room, period },
@@ -164,7 +181,7 @@ async function loadList() {
       return loadList();
     }
   } catch (error) {
-    console.error("Load chỉ số search failed", error);
+    console.error("Load chi so search failed", error);
     meters = [];
     totalItems = 0;
     totalPages = 1;
@@ -178,23 +195,26 @@ async function loadInvoiceLocksForCurrentMeters() {
   invoiceLockedKeys = new Set();
   if (!meters.length) return;
 
-  const roomIds = [...new Set(meters.map((m) => m?.phongTro?.phongTroId).filter(Boolean))];
-  if (!roomIds.length) return;
-
   try {
-    const invoiceByRoom = await Promise.all(
-      roomIds.map((roomId) =>
-        window.fetchAllPages(api, `/api/hoa-don/phong/${roomId}`, { sortBy: "ngayLap", direction: "desc" }).catch(() => [])
-      )
-    );
-    invoiceByRoom.forEach((items, idx) => {
-      const roomId = roomIds[idx];
-      (items || []).forEach((bill) => {
-        if (!bill?.kyHoaDon) return;
-        const contractId = bill?.hopDong?.hopDongId || null;
-        invoiceLockedKeys.add(meterLockKey(contractId, roomId, bill.kyHoaDon));
-        invoiceLockedKeys.add(meterLockKey(null, roomId, bill.kyHoaDon));
-      });
+    const checks = await Promise.all(meters.map(async (meter) => {
+      const roomId = meter?.phongTro?.phongTroId || null;
+      const contractId = meter?.hopDong?.hopDongId || null;
+      const period = meter?.ky || "";
+      if (!roomId || !period) return null;
+      try {
+        const query = new URLSearchParams();
+        if (contractId) query.set("hopDongId", String(contractId));
+        query.set("phongTroId", String(roomId));
+        query.set("kyHoaDon", period);
+        const exists = await apiClient(`/api/hoa-don/exists?${query.toString()}`);
+        return exists ? meterLockKey(contractId, roomId, period) : null;
+      } catch (_) {
+        return null;
+      }
+    }));
+
+    checks.filter(Boolean).forEach((key) => {
+      invoiceLockedKeys.add(key);
     });
   } catch (_) {
     invoiceLockedKeys = new Set();
@@ -203,12 +223,12 @@ async function loadInvoiceLocksForCurrentMeters() {
 
 async function saveMeter() {
   const payload = buildPayload();
-  if (!payload?.hopDong?.hopDongId) {
-    alert("Vui lòng chọn hợp đồng");
+  if (!payload?.hopDongId) {
+    alert("Vui long chon hop dong");
     return;
   }
   if (payload.chiSoMoi < payload.chiSoCu) {
-    alert("Chỉ số mới phải lớn hơn hoặc bằng chỉ số cũ");
+    alert("Ch? s? m?i ph?i l?n hon ho?c b?ng chi so cu");
     return;
   }
 
@@ -217,12 +237,12 @@ async function saveMeter() {
   const method = meterId ? "PUT" : "POST";
 
   try {
-    await api(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+    await apiClient(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
     closeModal();
     resetForm();
     await loadList();
   } catch (error) {
-    alert(`Lưu chỉ số thất bại: ${error.message}`);
+    alert(`Luu chi so th?t b?i: ${error.message}`);
   }
 }
 
@@ -252,7 +272,7 @@ function bindPagination() {
 function bindModal() {
   $("addMeterBtn").addEventListener("click", () => {
     resetForm();
-    $("meterTitle").textContent = "Thêm chỉ số";
+    $("meterTitle").textContent = "Them chi so";
     openModal();
   });
   $("meterClose").addEventListener("click", closeModal);
@@ -269,11 +289,11 @@ function bindTableActions() {
     const meterId = Number(button.dataset.id);
     let meter = meters.find((item) => item.chiSoId === meterId);
     if (!meter) {
-      try { meter = await api(`/api/chi-so/${meterId}`); } catch (_) { return; }
+      try { meter = await apiClient(`/api/chi-so/${meterId}`); } catch (_) { return; }
     }
     if (!meter) return;
     if (isMeterLocked(meter)) {
-      alert("Chỉ số kỳ này đã có hóa đơn. Hãy xóa hóa đơn trước khi sửa/xóa chỉ số.");
+      alert("Chi so ky nay da co hoa don. Hay xoa hoa don truoc khi sua/xoa chi so.");
       return;
     }
 
@@ -283,12 +303,12 @@ function bindTableActions() {
     }
 
     if (button.dataset.action === "delete") {
-      if (!confirm("Xóa chỉ số này?")) return;
+      if (!confirm("Xoa chi so nay?")) return;
       try {
-        await api(`/api/chi-so/${meterId}`, { method: "DELETE" });
+        await apiClient(`/api/chi-so/${meterId}`, { method: "DELETE" });
         await loadList();
       } catch (error) {
-        alert(`Xóa chỉ số thất bại: ${error.message}`);
+        alert(`Xoa chi so that bai: ${error.message}`);
       }
     }
   });
@@ -302,3 +322,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadMeta();
   await loadList();
 });
+
+})();
+
+
